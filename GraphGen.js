@@ -54,9 +54,6 @@ function filterAlgorithms(algorithms, directed, weighted) {
 }
 /* End of Applicable methods */
 
-// Common arrow head ID for this graph
-let arrowId = `arrowHead${graphCount}`; // Creating separate arrow heads for each graph, while also grouping the similar ones
-
 // Functions exclusive to container
 let prevContainer;
 let currentContainer;
@@ -239,7 +236,7 @@ function adjustViewBox(svg, nodes, grid) { // Takes grid as a parameter to redra
 /* End of viewbox adjustment */
 
 /* Function to align edges */
-function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg) {
+function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId) {
     link.attr('d', d => {
         // Arc bidirectional edges
         if (d.bidirectional) {
@@ -252,60 +249,44 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg)
     });
 
     if (directed) {
-        // Create a local <defs> section for this graph
-        let defs = svg.select('defs');
-        if (defs.empty()) {
-            defs = svg.append('defs');
-        }
-
-        // Append the default straight arrow marker once per graph
-        if (defs.select(`#${arrowId}`).empty()) {
-            defs.append('marker')
-                .attr('id', arrowId)
-                .attr('viewBox', '0 -5 10 10')
-                .attr('refX', 25)
-                .attr('refY', 0)
-                .attr('markerWidth', 8)
-                .attr('markerHeight', 8)
-                .attr('orient', 'auto')
-                .append('path')
-                .attr('d', 'M0,-5L10,0L0,5')
-                .attr('fill', edgeColor);
-        }
-
         link.each(function (d) {
-            const path = d3.select(this);
-
             if (d.bidirectional) {
+                const path = d3.select(this);
                 const dx = d.target.x - d.source.x;
                 const dy = d.target.y - d.source.y;
-                const length = Math.sqrt(dx * dx + dy * dy);
+                const length = Math.sqrt(dx * dx + dy * dy); // Arc radius
 
-                // Create a unique marker ID for this arc
+                // Calculate the tangent angle at the end of the arc - used to rotate directed markers based on the edge curving
+                const angle = Math.atan2(dy, dx) + Math.PI / (smoothFunction(length));
+
+                // Create a unique marker ID for each arrow
                 const uniqueArrowId = `${arrowId}-${d.source.id}-${d.target.id}`;
 
-                // Calculate tangent angle for orienting curved arrow
-                const angle = Math.atan2(dy, dx) + Math.PI / smoothFunction(length);
-
-                // Create the unique marker only if not already defined
-                if (defs.select(`#${uniqueArrowId}`).empty()) {
-                    defs.append('marker')
+                // Append a unique marker for this edge if it doesn't already exist
+                if (!svg.select(`#${uniqueArrowId}`).node()) {
+                    svg.append('defs')
+                        .append('marker')
                         .attr('id', uniqueArrowId)
                         .attr('viewBox', '0 -5 10 10')
                         .attr('refX', 25)
                         .attr('refY', 0)
                         .attr('markerWidth', 8)
                         .attr('markerHeight', 8)
-                        .attr('orient', angle * (180 / Math.PI)) // use angle here
+                        .attr('orient', 'auto')
                         .append('path')
                         .attr('d', 'M0,-5L10,0L0,5')
                         .attr('fill', edgeColor);
                 }
 
-                // Use the unique marker
+                // Update the marker-end attribute of the path to use the unique marker to match the curve of bidirectional edge
                 path.attr('marker-end', `url(#${uniqueArrowId})`);
+
+                // Update the orient attribute of the unique marker
+                svg.select(`#${uniqueArrowId}`)
+                    .attr('orient', angle * (180 / Math.PI)); // Convert radians to degrees
             } else {
-                // Use the shared arrowhead for straight edges
+                // For non-bidirectional edges, use the default marker
+                const path = d3.select(this);
                 path.attr('marker-end', `url(#${arrowId})`);
             }
         });
@@ -411,8 +392,11 @@ function smoothFunction(x, k = 0.02, c = 275) {
 }
 
 function addGraph(edgesInput = null, inputName = null) { // Core function will all functionalities
-    // Graph name details
+    // Common arrow head ID for this graph
+    const arrowId = `arrowHead${graphCount}`; // Creating separate arrow heads for each graph, while also grouping the similar ones
+    graphCount++;
 
+    // Graph name details
     if (inputName === null) {
         inputName = document.getElementById('graphName').value;
     }
@@ -540,54 +524,98 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
             let resultContainer = document.createElement('p')
             switch (algorithm.name) {
                 case 'bfs':
-                    // let bfsSource = prompt("Enter source vertex");
-                    let bfsSource = prompt("Enter source vertex")
+                    let bfsSource = prompt("Enter source vertex");
                     result = bfs(edgesRaw, bfsSource, directed);
-                    resultContainer.innerHTML = `BFS through ${displayName} with ${bfsSource} as source node: ${result}`;
-                    document.body.appendChild(resultContainer);
+                    if (result !== null) {
+                        resultContainer.innerHTML = `<font style="color: #ffc66d;">BFS with ${bfsSource} as source node: </font> ${result}`;
+                        methodsElement.appendChild(resultContainer);
+                        methodsElement.style.display = 'block';
+                    } else {
+                        resultContainer.remove();
+                    }
                     break;
                 case 'dfs':
                     let dfsSource = prompt("Enter source vertex");
                     result = dfs(edgesRaw, dfsSource || undefined, directed);
-                    resultContainer.innerHTML = `DFS through ${displayName}${dfsSource ? ` with ${dfsSource} as source node` : ''}: ${result}`;
-                    document.body.appendChild(resultContainer);
+                    if (result !== null) {
+                        resultContainer.innerHTML = `<font style="color: #ffc66d;">DFS through ${displayName}${dfsSource ? ` with ${dfsSource} as source node` : ''}: </font> ${result}`;
+                        methodsElement.appendChild(resultContainer);
+                        methodsElement.style.display = 'block';
+                    } else {
+                        resultContainer.remove();
+                    }
                     break;
                 case 'dijkstra':
                     let dijkstraSource = prompt("Enter source vertex");
                     result = dijkstra(edgesRaw, dijkstraSource, directed);
-                    resultContainer.innerHTML = `Dijkstra's through ${displayName} with ${dijkstraSource} as source node: ${result}`;
-                    document.body.appendChild(resultContainer);
+                    if (result !== null) {
+                        resultContainer.innerHTML = `<font style="color: #ffc66d;">Dijkstra's through ${displayName} with ${dijkstraSource} as source node: </font> <br> ${result} <br>`;
+                        methodsElement.appendChild(resultContainer);
+                        methodsElement.style.display = 'block';
+                    } else {
+                        resultContainer.remove();
+                    }
                     break;
                 case 'floydWarshall':
                     result = floydWarshall(edgesRaw);
-                    resultContainer.innerHTML = `Floyd Warshall through ${displayName}: ${result}`;
-                    document.body.appendChild(resultContainer);
+                    if (result !== null) {
+                        resultContainer.innerHTML = `<font style="color: #ffc66d;">Floyd Warshall through ${displayName}: </font> ${result}`;
+                        methodsElement.appendChild(resultContainer);
+                        methodsElement.style.display = 'block';
+                    } else {
+                        resultContainer.remove();
+                    }
                     break;
                 case 'bellmanFord':
                     let bellmanSource = prompt("Enter source vertex");
-                    result = bellmanFord(edgesRaw, bellmanSource);
-                    resultContainer.innerHTML = `Bellman Ford through ${displayName} with ${bellmanSource} as source node: ${result}`;
-                    document.body.appendChild(resultContainer);
+                    result = bellmanFord(edgesRaw, bellmanSource, directed);
+                    if (result !== null) {
+                        resultContainer.innerHTML = `<font style="color: #ffc66d;">Bellman Ford through ${displayName} with ${bellmanSource} as source node: </font> ${result}`;
+                        methodsElement.appendChild(resultContainer);
+                        methodsElement.style.display = 'block';
+                    } else {
+                        resultContainer.remove();
+                    }
                     break;
                 case 'mst':
                     result = mst(edgesRaw);
-                    resultContainer.innerHTML = `MST through ${displayName}: ${result}`;
-                    document.body.appendChild(resultContainer);
+                    if (result !== null) {
+                        resultContainer.innerHTML = `<font style="color: #ffc66d;">MST through ${displayName}: </font> ${result}`;
+                        methodsElement.appendChild(resultContainer);
+                        methodsElement.style.display = 'block';
+                    } else {
+                        resultContainer.remove();
+                    }
                     break;
                 case 'topologicalSort':
                     result = topologicalSort(edgesRaw);
-                    resultContainer.innerHTML = `Topological Sort through ${displayName}: ${result}`;
-                    document.body.appendChild(resultContainer);
+                    if (result !== null) {
+                        resultContainer.innerHTML = `<font style="color: #ffc66d;">Topological Sort through ${displayName}: </font> ${result}`;
+                        methodsElement.appendChild(resultContainer);
+                        methodsElement.style.display = 'block';
+                    } else {
+                        resultContainer.remove();
+                    }
                     break;
                 case 'scc':
                     result = StronglyConnectedComponents(edgesRaw);
-                    resultContainer.innerHTML = `SCC through ${displayName}: ${result}`;
-                    document.body.appendChild(resultContainer);
+                    if (result !== null) {
+                        resultContainer.innerHTML = `<font style="color: #ffc66d;">SCC through ${displayName}: </font> ${result}`;
+                        methodsElement.appendChild(resultContainer);
+                        methodsElement.style.display = 'block';
+                    } else {
+                        resultContainer.remove();
+                    }
                     break;
                 case 'bcc':
                     result = BiconnectedComponents(edgesRaw);
-                    resultContainer.innerHTML = `BCC through ${displayName}: ${result}`;
-                    document.body.appendChild(resultContainer);
+                    if (result !== null) {
+                        resultContainer.innerHTML = `<font style="color: #ffc66d;">BCC through ${displayName}: </font> ${result}`;
+                        methodsElement.appendChild(resultContainer);
+                        methodsElement.style.display = 'block';
+                    } else {
+                        resultContainer.remove();
+                    }
                     break;
                 default:
                     alert("Algorithm not implemented.");
@@ -640,7 +668,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     // Append the graphHeader to the container
     container.appendChild(graphHeader);
 
-    /* Create the graphContent div - contains the SVG element */
+    /* Create the graphContent div - contains the SVG element and the methods called on the graph */
     const graphContent = document.createElement('div');
     graphContent.className = 'graphContent';
     graphContent.style.height = `calc(100% - ${graphHeader.offsetHeight}px)`; // Set the height of the graphContent to fill the remaining space
@@ -650,12 +678,75 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     graphContent.appendChild(svgElement);
     /* End of graphContent div */
 
+    // Create the element that contains called methods
+    const methodsElement = document.createElement('div');
+    methodsElement.className = 'methodsElem';
+    methodsElement.addEventListener('wheel', (event) => {
+        event.stopPropagation();
+    })
+    graphContent.appendChild(methodsElement);
+
+    // Resizing for methodsElement
+    const topResizeHandle = document.createElement('div');
+    topResizeHandle.className = 'top-resize-handle';
+    // Resizing logic
+    topResizeHandle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        let startY = e.clientY;
+        let startHeight = methodsElement.offsetHeight;
+        let startTop = methodsElement.offsetTop;
+
+        function onMouseMove(event) {
+            let newHeight = startHeight - (event.clientY - startY);
+            let newTop = startTop + (event.clientY - startY);
+
+            const minHeight = container.offsetHeight * 0.2;
+            const maxHeight = container.offsetHeight * 0.9;
+            if (newHeight >= minHeight && newHeight <= maxHeight) { // Minimum height
+                methodsElement.style.height = newHeight + 'px';
+                methodsElement.style.top = newTop + 'px';
+            }
+        }
+
+        function onMouseUp() {
+            document.removeEventListener('mousemove', onMouseMove);
+        }
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp, { once: true });
+    });
+    // End of resizing for methodsElement
+    methodsElement.appendChild(topResizeHandle);
+
+    const copyr = document.createElement('div')
+    copyr.style.display = 'inline-block';
+    copyr.style.margin = '5px 0px 0px 10px';
+    copyr.innerHTML = '© 2025 arx-net';
+    methodsElement.appendChild(copyr);
+
+    const closeButtonME = document.createElement('button');
+    closeButtonME.id = 'closeButtonME'
+    closeButtonME.innerHTML = '&#10005;';
+    closeButtonME.title = 'Close graph methods window';
+    closeButtonME.addEventListener('click', () => {
+        methodsElementToggle.click();
+    })
+    methodsElement.appendChild(closeButtonME)
+
+
+
+    const methodsElementToggle = document.createElement('button');
+    methodsElementToggle.id = 'methodsElementToggle'
+    methodsElementToggle.innerHTML = '&#9776'; // Hamburger menu
+    methodsElementToggle.title = 'Toggle visibility for called methods on this graph'
+    methodsElementToggle.addEventListener('click', () => {
+        methodsElement.style.display = methodsElement.style.display === 'block' ? 'none' : 'block';
+    })
+    rearrangeMethods.appendChild(methodsElementToggle);
+
     // Append the graphContent to the container
     container.appendChild(graphContent);
     /* End of content of container */
-    if (view9gen) {
-        shrinkGraph(container);
-    } // Shrink the graph in 9 graph view
     focusAndCenterContainer(container); // Focus on the container when it is created
 
     const resizeHandles = container.querySelectorAll('.resize-handle');
@@ -702,11 +793,13 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
                     newTop = startTop + (event.clientY - startY);
                 }
 
-                if (newWidth > 50) {
+                const minWidth = window.innerWidth * 0.25
+                const minHeight = window.innerHeight * 0.33
+                if (newWidth > minWidth) {
                     container.style.width = newWidth + 'px';
                     container.style.left = newLeft + 'px';
                 }
-                if (newHeight > 50) {
+                if (newHeight > minHeight) {
                     container.style.height = newHeight + 'px';
                     container.style.top = newTop + 'px';
                 }
@@ -925,19 +1018,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     // Attach zoom to mousewheel
     container.addEventListener('wheel', event => {
         event.preventDefault();
-        if (event.ctrlKey) {
-            const zoomFactor = 0.1; // Increase/decrease step
-            if (event.deltaY < 0) {
-                scale = Math.min(scale + zoomFactor, 1.5);
-            } else {
-                scale = Math.max(scale - zoomFactor, 0.45);
-            }
-
-            container.style.transform = `scale(${scale})`;
-        } else {
-            event.deltaY < 0 ? zoomIn() : zoomOut();
-        }
-
+        event.deltaY < 0 ? zoomIn() : zoomOut();
     });
     /* End of zoom functionality */
 
@@ -1028,7 +1109,6 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     });
 
     /* Drawing the graph */
-
     // Draw links
     const link = svg.selectAll('path')
         .data(edges)
@@ -1110,7 +1190,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
     // Update positions on simulation
     simulation.on('tick', () => {
-        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg);
+        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
     });
 
     /* Auto-rearrange nodes functionality */
@@ -1120,7 +1200,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         node.attr('cx', d => d.x).attr('cy', d => d.y);
 
         // Update link positions
-        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg);
+        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
         adjustViewBox(svg, nodes, grid);
         drawGrid(svg, grid);
 
@@ -1133,7 +1213,4 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     });
     /* End of auto-rearrange nodes functionality */
     /* End of functions to update positions */
-    graphCount++; // Incrementing global graphCount
-    // arrowId = `arrowHead${graphCount}`;
-    console.log(arrowId)
 };

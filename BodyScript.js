@@ -79,93 +79,6 @@ let view4gen = false;
 let view9gen = false;
 let snapping = false
 
-function shrinkGraph(container = null) {
-    if (!container) {
-        const allCon = document.querySelectorAll('.graphContainer');
-        allCon.forEach(function (item) {
-            item.style.fontSize = '10px';
-            const checkboxes = item.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(function (checkbox) {
-                checkbox.style.width = '10px';
-                checkbox.style.height = '10px';
-            });
-            const checkboxticks = item.querySelectorAll('input[type="checkbox"]:checked');
-            checkboxticks.forEach(function (checkboxtick) {
-                checkboxtick.style.setProperty('--tick-width', '1.5px');
-                checkboxtick.style.setProperty('--tick-height', '4px');
-                checkboxtick.style.setProperty('--border-width', '1.5px');
-            });
-            const buttons = item.querySelectorAll('button');
-            buttons.forEach(function (button) {
-                button.style.fontSize = '10px';
-            });
-            const autoR = item.querySelector('.rearrangeMethods');
-            const baseImg = autoR.getElementsByTagName('img')[0];
-            baseImg.style.width = '12px';
-            baseImg.style.height = '12px';
-
-            const itemHeader = item.querySelector('.graphHeader');
-            const itemContent = item.querySelector('.graphContent');
-            itemContent.style.height = `calc(100% - ${itemHeader.offsetHeight}px)`;
-        });
-    } else {
-        container.style.fontSize = '10px';
-        const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(function (checkbox) {
-            checkbox.style.width = '10px';
-            checkbox.style.height = '10px';
-        });
-        const checkboxticks = container.querySelectorAll('input[type="checkbox"]:checked');
-        checkboxticks.forEach(function (checkboxtick) {
-            checkboxtick.style.setProperty('--tick-width', '1.5px');
-            checkboxtick.style.setProperty('--tick-height', '4px');
-            checkboxtick.style.setProperty('--border-width', '1.5px');
-        });
-        const buttons = container.querySelectorAll('button');
-        buttons.forEach(function (button) {
-            button.style.fontSize = '10px';
-        });
-        const autoR = container.querySelector('.rearrangeMethods');
-        const baseImg = autoR.getElementsByTagName('img')[0];
-        baseImg.style.width = '12px';
-        baseImg.style.height = '12px';
-
-        const itemHeader = container.querySelector('.graphHeader');
-        const itemContent = container.querySelector('.graphContent');
-        itemContent.style.height = `calc(100% - ${itemHeader.offsetHeight}px)`;
-    }
-}
-
-function expandGraph() {
-    const allCon = document.querySelectorAll('.graphContainer');
-    allCon.forEach(function (item) {
-        item.style.fontSize = '14px';
-        const checkboxes = item.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(function (checkbox) {
-            checkbox.style.width = '15px';
-            checkbox.style.height = '15px';
-        });
-        const checkboxticks = item.querySelectorAll('input[type="checkbox"]:checked');
-        checkboxticks.forEach(function (checkboxtick) {
-            checkboxtick.style.setProperty('--tick-width', '3px');
-            checkboxtick.style.setProperty('--tick-height', '8px');
-            checkboxtick.style.setProperty('--border-width', '2px');
-        });
-        const buttons = item.querySelectorAll('button');
-        buttons.forEach(function (button) {
-            button.style.fontSize = '14px';
-        });
-        const autoR = item.querySelector('.rearrangeMethods');
-        const baseImg = autoR.getElementsByTagName('img')[0];
-        baseImg.style.width = '20px';
-        baseImg.style.height = '20px';
-
-        const itemHeader = item.querySelector('.graphHeader');
-        const itemContent = item.querySelector('.graphContent');
-        itemContent.style.height = `calc(100% - ${itemHeader.offsetHeight}px)`;
-    });
-}
-
 view4.addEventListener('click', function () {
     const img = view4.getElementsByTagName('img')[0];
     if (img.src.endsWith('enable4g.png')) { // Button is enabled here, actions to disable
@@ -180,7 +93,6 @@ view4.addEventListener('click', function () {
             item.style.width = '37.5%';
             item.style.height = '50%';
         });
-        expandGraph();
     }
 });
 
@@ -198,7 +110,6 @@ view9.addEventListener('click', function () {
             item.style.width = '25%';
             item.style.height = '33.33%';
         });
-        shrinkGraph();
     }
 });
 

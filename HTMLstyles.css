@@ -19,6 +19,10 @@ body {
 p {
     margin: 10px;
 }
+
+table {
+    margin-top: 5px;
+}
 /* Typography */
 h1,
 h3 {
@@ -39,6 +43,7 @@ button {
 }
 
 #generateGraph { /* Generate Graph Button */
+    outline: none;
     background-color: #ffc66d;
     border: 2px solid transparent;
     color: #000;
@@ -196,21 +201,19 @@ input[type="checkbox"]:checked::before {
 }
 
 /* Scrollbar */
-.outliner::-webkit-scrollbar {
+::-webkit-scrollbar {
     width: 10px;
 }
 
-.outliner::-webkit-scrollbar-track {
-    background: #1d1d1d;
+::-webkit-scrollbar-track {
+    background: #141414;
 }
-
-.outliner::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
     background-color: #3f3f3f;
     border-radius: 10px;
     border: 2px solid #1d1d1d;
 }
-
-.outliner::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb:hover {
     background-color: #555;
 }
 

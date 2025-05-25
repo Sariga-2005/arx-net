@@ -9,7 +9,7 @@ function vertexExists(edges, vertex, isDirected = true) {
 function bfs(edges, start = prompt("Enter start vertex"), isDirected = true) {
     if (!vertexExists(edges, start, isDirected)) {
         alert("Vertex " + start + " not found.");
-        return [];
+        return null;
     }
 
     const graph = {};
@@ -48,7 +48,7 @@ function bfs(edges, start = prompt("Enter start vertex"), isDirected = true) {
 function dfs(edges, start = prompt("Enter start vertex"), isDirected = true) {
     if (!vertexExists(edges, start, isDirected)) {
         alert("Vertex " + start + " not found.");
-        return [];
+        return null;
     }
 
     const graph = {};
@@ -101,7 +101,7 @@ class PriorityQueue {
 function dijkstra(edges, start = prompt("Enter start vertex"), isDirected = true) {
     if (!vertexExists(edges, start, isDirected)) {
         alert("Vertex " + start + " not found.");
-        return [];
+        return null;
     }
 
     const graph = {};
@@ -140,8 +140,29 @@ function dijkstra(edges, start = prompt("Enter start vertex"), isDirected = true
         }
     }
 
-    return { distances, previous };
+    return `
+    <table border="1" cellpadding="5" cellspacing="0">
+        <tr><th>Vertex</th><th>Distance</th><th>Path</th></tr>
+        ${Object.keys(distances).map(vertex => {
+        let path = [];
+        let current = vertex;
+        while (current !== null) {
+            path.unshift(current);
+            current = previous[current];
+        }
+        return `
+                <tr>
+                    <td>${vertex}</td>
+                    <td>${distances[vertex] === Infinity ? "∞" : distances[vertex]}</td>
+                    <td>${distances[vertex] === Infinity ? "unreachable" : path.join(" → ")}</td>
+                </tr>
+            `;
+    }).join("")}
+    </table>
+`;
+
 }
+
 function floydWarshall(edges) {
     const graph = {};
     const nodes = new Set();
@@ -184,13 +205,46 @@ function floydWarshall(edges) {
         }
     }
 
-    return { dist, next };
+    return `
+    ${Array.from(nodes).map(i => `
+        <h4>From: ${i}</h4>
+        <table border="1" cellpadding="5" cellspacing="0">
+            <tr><th>To</th><th>Distance</th><th>Path</th></tr>
+            ${Array.from(nodes).map(j => {
+        if (i === j) return '';
+        const distance = dist[i][j] === Infinity ? "∞" : dist[i][j];
+        let path = [];
+        let u = i;
+        if (next[i][j] === undefined) {
+            return `
+                        <tr>
+                            <td>${j}</td>
+                            <td>∞</td>
+                            <td>unreachable</td>
+                        </tr>`;
+        }
+        while (u !== j) {
+            path.push(u);
+            u = next[u][j];
+            if (u === undefined) break;
+        }
+        path.push(j);
+        return `
+                    <tr>
+                        <td>${j}</td>
+                        <td>${distance}</td>
+                        <td>${distance === "∞" ? "unreachable" : path.join(" → ")}</td>
+                    </tr>`;
+    }).join('')}
+        </table>
+    `).join('')}
+`;
 }
 
-function bellmanFord(edges, start = prompt("Enter start vertex")) {
+function bellmanFord(edges, start = prompt("Enter start vertex"), isDirected) {
     if (!vertexExists(edges, start, isDirected)) {
         alert("Vertex " + start + " not found.");
-        return [];
+        return null;
     }
     const graph = {};
     for (const { source, target, weight } of edges) {
@@ -221,8 +275,28 @@ function bellmanFord(edges, start = prompt("Enter start vertex")) {
         }
     }
 
-    return { distances, previous };
+    return `
+    <table border="1" cellpadding="5" cellspacing="0">
+        <tr><th>Vertex</th><th>Distance</th><th>Path</th></tr>
+        ${Object.keys(distances).map(vertex => {
+        let path = [];
+        let current = vertex;
+        while (current !== null) {
+            path.unshift(current);
+            current = previous[current];
+        }
+        return `
+                <tr>
+                    <td>${vertex}</td>
+                    <td>${distances[vertex] === Infinity ? "∞" : distances[vertex]}</td>
+                    <td>${distances[vertex] === Infinity ? "unreachable" : path.join(" → ")}</td>
+                </tr>
+            `;
+    }).join("")}
+    </table>
+`;
 }
+
 function mst(edges) {
     const graph = {};
     for (const { source, target, weight } of edges) {
@@ -296,9 +370,9 @@ function topologicalSort(edges) {
         alert("Graph has at least one cycle.");
         return null;
     }
-
     return sorted;
 }
+
 function StronglyConnectedComponents(edges) {
     const graph = {};
     const reverseGraph = {};
@@ -347,6 +421,7 @@ function StronglyConnectedComponents(edges) {
     }
     return sccs;
 }
+
 function BiconnectedComponents(edges) {
     const graph = {};
     const visited = new Set();
@@ -394,6 +469,5 @@ function BiconnectedComponents(edges) {
             bccDFS(node);
         }
     }
-
     return bccs;
 }
