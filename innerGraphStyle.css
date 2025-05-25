@@ -1,0 +1,134 @@
+.graphContainer {
+    position: absolute;
+    border: 2px solid #141414;
+    background-color: #ff0000; /* This color is not visible */
+    border-radius: 7px;
+    box-shadow: 0px 0px 16px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    font-size: 14px;
+}
+
+.graphContainer button {
+    font-size: 14px;
+}
+
+.graphContainer input[type="checkbox"] {
+    --tick-width: 3px;
+    --tick-height: 8px;
+    --border-width: 2px;
+
+    width: 15px;
+    height: 15px;
+}
+
+.graphContainer input[type="checkbox"]:checked::before {
+    width: var(--tick-width);
+    height: var(--tick-height);
+    border-width: 0 var(--border-width) var(--border-width) 0;
+}
+
+.graphHeader {
+    background-color: #141414;
+    color: #fff;
+    padding: 0 5px 0 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.graphHeader button {
+    aspect-ratio: 1; /* Square shaped */
+    margin:none;
+    vertical-align: middle;
+    text-align: center;
+    border: none;
+    background: none;
+    border-radius: 50%;
+    color: #fff;
+    box-sizing: border-box;
+}
+
+.graphHeader button:hover {
+    background-color: #ffc66d;
+    color: black
+}
+
+.graphOptions button {
+    font-size: 14px;
+}
+
+.graphContent {
+    background-color: #1d1d1d;
+}
+
+.resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+}
+
+.bottom-right {
+    bottom: 0;
+    right: 0;
+    cursor: nwse-resize;
+}
+
+.bottom-left {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+}
+
+.top-right {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+}
+
+.top-left {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+}
+
+svg {
+    width: 100%;
+    height: 100%;
+    user-select: none;
+}
+
+.rearrangeMethods {
+    display: inline-block;
+    margin:none;
+    margin-left: 10px;
+    user-select: none;
+}
+
+.rearrangeMethods button:hover {
+    background: #003992; /* Becomes #ffc66d when inverted */
+    color: white;
+    filter: invert(1);
+}
+
+.methodsDiv {
+    position: absolute;
+    background-color: #1f252a;
+    padding: 3px;
+    border-radius: 3px;
+}
+
+.methodsDiv button {
+    display: block;
+    width: 100%;
+    aspect-ratio: auto;
+    text-align: left;
+    padding: 3px 10px 3px 15px;
+    background-color: #1f252a;
+    color: #fff;
+    border-radius: 3px;
+}
+
+.methodsDiv button:hover {
+    background-color: #333f46;
+}
