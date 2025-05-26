@@ -12,6 +12,7 @@ let availableGraphs = [];
 
 // Graph style details
 const edgeColor = '#a3bf60'; // Color of the links between nodes
+const edgeColorHover = '#ff0000'; // Color of the links when hovered on
 const hoverColor = '#7a9ec2'; // Color of nodes when hovered on
 const nodeColor = '#ffc66d'; // Color of the nodes
 const nodeLabelColor = '#000'; // Color of the text on the nodes
@@ -262,44 +263,40 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
 
     if (directed) {
         link.each(function (d) {
+            const path = d3.select(this);
+            const dx = d.target.x - d.source.x;
+            const dy = d.target.y - d.source.y;
+            const length = Math.sqrt(dx * dx + dy * dy); // Arc radius
+
+            // Calculate the tangent angle at the end of the arc - used to rotate directed markers based on the edge curving
+            const angle = Math.atan2(dy, dx) + Math.PI / (smoothFunction(length));
+
+            // Create a unique marker ID for each arrow
+            const uniqueArrowId = `${arrowId}-${d.source.id}-${d.target.id}`;
+
+            // Append a unique marker for this edge if it doesn't already exist
+            if (!svg.select(`#${uniqueArrowId}`).node()) {
+                svg.append('defs')
+                    .append('marker')
+                    .attr('id', uniqueArrowId)
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', 25)
+                    .attr('refY', 0)
+                    .attr('markerWidth', 8)
+                    .attr('markerHeight', 8)
+                    .attr('orient', 'auto')
+                    .append('path')
+                    .attr('d', 'M0,-5L10,0L0,5')
+                    .attr('fill', edgeColor);
+            }
+
+            // Update the marker-end attribute of the path to use the unique marker to match the curve of bidirectional edge
+            path.attr('marker-end', `url(#${uniqueArrowId})`);
+
+            // Update the orient attribute of the unique marker
             if (d.bidirectional) {
-                const path = d3.select(this);
-                const dx = d.target.x - d.source.x;
-                const dy = d.target.y - d.source.y;
-                const length = Math.sqrt(dx * dx + dy * dy); // Arc radius
-
-                // Calculate the tangent angle at the end of the arc - used to rotate directed markers based on the edge curving
-                const angle = Math.atan2(dy, dx) + Math.PI / (smoothFunction(length));
-
-                // Create a unique marker ID for each arrow
-                const uniqueArrowId = `${arrowId}-${d.source.id}-${d.target.id}`;
-
-                // Append a unique marker for this edge if it doesn't already exist
-                if (!svg.select(`#${uniqueArrowId}`).node()) {
-                    svg.append('defs')
-                        .append('marker')
-                        .attr('id', uniqueArrowId)
-                        .attr('viewBox', '0 -5 10 10')
-                        .attr('refX', 25)
-                        .attr('refY', 0)
-                        .attr('markerWidth', 8)
-                        .attr('markerHeight', 8)
-                        .attr('orient', 'auto')
-                        .append('path')
-                        .attr('d', 'M0,-5L10,0L0,5')
-                        .attr('fill', edgeColor);
-                }
-
-                // Update the marker-end attribute of the path to use the unique marker to match the curve of bidirectional edge
-                path.attr('marker-end', `url(#${uniqueArrowId})`);
-
-                // Update the orient attribute of the unique marker
                 svg.select(`#${uniqueArrowId}`)
                     .attr('orient', angle * (180 / Math.PI)); // Convert radians to degrees
-            } else {
-                // For non-bidirectional edges, use the default marker
-                const path = d3.select(this);
-                path.attr('marker-end', `url(#${arrowId})`);
             }
         });
     }
@@ -508,7 +505,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
     // Rearrange nodes button
     const rearrangeNodes = document.createElement('button');
-    rearrangeNodes.title = 'Rearrange nodes as they first appeared in the graph';
+    rearrangeNodes.title = 'Rearrange vertices spaced evenly in a circle';
     const rearrangeNodesImg = document.createElement('img');
     rearrangeNodesImg.src = 'rearrange.png';
     rearrangeNodes.appendChild(rearrangeNodesImg);
@@ -1221,9 +1218,45 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         .attr('fill', 'none')
         .attr('stroke', edgeColor)
         .attr('stroke-width', 1.5)
-        .attr('marker-end', d => directed ? `url(#${arrowId}-${d.source.id}-${d.target.id})` : null)
+        .on('mouseover', function () {
+            d3.select(this).attr('stroke', edgeColorHover);
+            // Also change color of the directed marker (arrowhead) if present
+            if (directed) {
+                const markerUrl = d3.select(this).attr('marker-end');
+                if (markerUrl) {
+                    // Extract marker id from url(#markerId)
+                    const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
+                    if (markerIdMatch) {
+                        const markerId = markerIdMatch[1];
+                        // Change the fill color of the marker's path
+                        d3.select(svgElement)
+                            .select(`#${markerId}`)
+                            .select('path')
+                            .attr('fill', edgeColorHover);
+                    }
+                }
+            }
+        })
+        .on('mouseout', function () {
+            d3.select(this).attr('stroke', edgeColor);
+            // Also reset color of the directed marker (arrowhead) if present
+            if (directed) {
+                const markerUrl = d3.select(this).attr('marker-end');
+                if (markerUrl) {
+                    // Extract marker id from url(#markerId)
+                    const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
+                    if (markerIdMatch) {
+                        const markerId = markerIdMatch[1];
+                        // Reset the fill color of the marker's path
+                        d3.select(svgElement)
+                            .select(`#${markerId}`)
+                            .select('path')
+                            .attr('fill', edgeColor);
+                    }
+                }
+            }
+        })
         .on('contextmenu', function (event, d) {
-            console.log(`${arrowId}-${d.source.id}-${d.target.id}`)
             event.preventDefault();
             event.stopPropagation();
 
@@ -1237,7 +1270,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
             // Delete link option
             const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Delete link';
+            deleteBtn.textContent = 'Delete this edge';
             deleteBtn.onclick = () => {
                 // Remove the edge from the edges array
                 const idx = edges.indexOf(d);
@@ -1272,36 +1305,6 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
             document.body.appendChild(menu);
         })
-        .on('mouseover', function () {
-            d3.select(this).attr('stroke', hoverColor);
-        })
-        .on('mouseout', function () {
-            d3.select(this).attr('stroke', edgeColor);
-        })
-
-
-    // Draw arrowhead markers (Directed edges)
-    if (directed) {
-        // Create a unique marker for each edge
-        edges.forEach((edge, i) => {
-            const uniqueArrowId = `${arrowId}-${edge.source.id}-${edge.target.id}`;
-            svg.append('defs')
-                .append('marker')
-                .attr('id', uniqueArrowId)
-                .attr('viewBox', '0 -5 10 10')
-                .attr('refX', 25)
-                .attr('refY', 0)
-                .attr('markerWidth', 8)
-                .attr('markerHeight', 8)
-                .attr('orient', 'auto')
-                .append('path')
-                .attr('d', 'M0,-5L10,0L0,5')
-                .attr('fill', edgeColor);
-        });
-
-        // Update marker-end for each link to use its unique arrow
-        // link.attr('marker-end', d => `url(#${arrowId}-${d.source.id || d.source}-${d.target.id || d.target})`);
-    }
 
     // Draw nodes - Drawing nodes after links so that they appear in front
     const node = svg.selectAll('circle')
@@ -1336,7 +1339,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
             // Delete node option
             const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Delete node';
+            deleteBtn.textContent = 'Delete this vertex';
             deleteBtn.onclick = () => {
                 // Remove the node from the nodes array
                 const idx = nodes.indexOf(d);
