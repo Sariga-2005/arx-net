@@ -8,7 +8,7 @@ document.getElementById('edges').addEventListener('keydown', function (event) {
 
 /* Show controls common to all graphs on right click */
 outliner.addEventListener('contextmenu', function (event) {
-    event.preventDefault(); // Prevent the default context menu
+    // event.preventDefault(); // Prevent the default context menu
 
     // Get the mouse position relative to the viewport
     const x = event.clientX - 50;

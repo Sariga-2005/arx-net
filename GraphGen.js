@@ -55,8 +55,6 @@ function filterAlgorithms(algorithms, directed, weighted) {
 /* End of Applicable methods */
 
 // Functions exclusive to container
-let prevContainer;
-let currentContainer;
 function focusOnThisContainer(container) {
     document.querySelectorAll('.graphContainer').forEach(c => {
         c.style.zIndex = 1;
@@ -66,11 +64,25 @@ function focusOnThisContainer(container) {
     container.style.boxShadow = '0px 0px 16px rgba(0, 0, 0, 0.5)';
 }
 // Focus and center this container
-function focusAndCenterContainer(container) {
+function focusAndCenterContainer(container, resize = true, fromCenter = false, oldLeft = null, oldTop = null) {
+    if (resize) {
+        container.style.height = '50%';
+        container.style.width = '37.5%';
+    }
     const offsetX = container.offsetWidth / 2;
     const offsetY = container.offsetHeight / 2;
-    container.style.left = 'calc(37.5% - ' + offsetX + 'px)';
-    container.style.top = 'calc(50% - ' + offsetY + 'px)';
+
+    if (oldLeft !== null && oldTop !== null) {
+        container.style.left = oldLeft + 'px';
+        container.style.top = oldTop + 'px';
+    } else {
+        if (!fromCenter) {
+            container.style.left = 'calc(37.5% - ' + offsetX + 'px)';
+        } else {
+            container.style.left = 'calc(50% - ' + offsetX + 'px)';
+        }
+        container.style.top = 'calc(50% - ' + offsetY + 'px)';
+    }
     focusOnThisContainer(container)
 }
 
@@ -326,6 +338,17 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
 }
 /* End of align edges */
 
+function setMethodsElementSize(container, element) {
+    // const containerLeft = container.offsetLeft;
+    // const containerTop = container.offsetTop;
+    // const containerWidth = container.offsetWidth;
+
+    element.style.bottom = '2px';
+    element.style.left = '2px';
+    element.style.width = 'calc(100% - 4px)';
+    element.style.height = '30%';
+}
+
 // Function to enable force
 function enableForceSimulation(simulation, edges, width, height) {
     simulation.force('charge', d3.forceManyBody().strength(-300)); // Charge force makes nodes repel each other
@@ -445,7 +468,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     });
 
     /* Content of container */
-    // Create the graphHeader div - contains the graph name, use force checkbox, show grid checkbox, auto-rearrange radius input, and auto-rearrange button, fullScreen button, and close button (The entire window functionality)
+    // Create the graphHeader div - contains the graph name, use force checkbox, show grid checkbox, auto-rearrange radius input, and auto-rearrange button, and close button (The entire window functionality)
     const graphHeader = document.createElement('div');
     graphHeader.className = 'graphHeader';
 
@@ -630,6 +653,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     // Right click to display available methods
     methodsButton.addEventListener('click', (event) => {
         methodsDiv.style.left = `${methodsButton.offsetLeft}px`;
+        methodsElement.style.display = 'none'; // Hide methodsElement if it is visible
         methodsDiv.style.display = methodsDiv.style.display === 'none' ? 'block' : 'none';
         methodsDiv.addEventListener('mouseleave', () => {
             methodsDiv.style.display = 'none';
@@ -644,7 +668,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     // Append the headerSpan to the graphHeader
     graphHeader.appendChild(headerSpan);
 
-    // Create the controls div - contains the fullScreen button and close button
+    // Create the controls div - contains the close button
     /* Controls */
     const controlsSpan = document.createElement('span');
 
@@ -704,7 +728,6 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
             const maxHeight = container.offsetHeight * 0.9;
             if (newHeight >= minHeight && newHeight <= maxHeight) { // Minimum height
                 methodsElement.style.height = newHeight + 'px';
-                methodsElement.style.top = newTop + 'px';
             }
         }
 
@@ -749,6 +772,65 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     /* End of content of container */
     focusAndCenterContainer(container); // Focus on the container when it is created
 
+    // Right clicking will display options to reset zoom, focus, hide, and delete graph.
+    container.addEventListener('contextmenu', function (event) {
+        event.preventDefault();
+
+        // Create context menu
+        const menu = document.createElement('div');
+        menu.className = 'methodsDiv'
+        menu.style.position = 'fixed';
+        menu.style.left = `${event.clientX}px`;
+        menu.style.top = `${event.clientY}px`;
+
+        // Helper to add menu items
+        function addMenuItem(label, onClick) {
+            const item = document.createElement('button');
+            item.textContent = label;
+            item.addEventListener('click', () => {
+                onClick();
+                menu.remove();
+            });
+            menu.appendChild(item);
+        }
+
+        // Reset zoom
+        addMenuItem('Reset Zoom', () => {
+            if (view9gen) {
+                container.style.width = '25%';
+                container.style.height = '33.33%';
+            } else {
+                container.style.width = '37.5%';
+                container.style.height = '50%';
+            }
+        });
+
+        // Focus (center and bring to front)
+        addMenuItem('Focus', () => {
+            focusAndCenterContainer(container);
+        });
+
+        // Hide container
+        addMenuItem('Hide', () => {
+            showHideGraph.click();
+        });
+
+        // Delete container
+        addMenuItem('Delete', () => {
+            deleteThisGraph.click()
+        });
+
+        // Remove menu on click elsewhere
+        document.addEventListener('mousedown', function handler(e) {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('mousedown', handler);
+            }
+        }, { once: true });
+
+        document.body.appendChild(menu);
+    });
+
     const resizeHandles = container.querySelectorAll('.resize-handle');
 
     /* Container elements' functionality */
@@ -762,7 +844,11 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     resizeHandles.forEach(handle => {
         handle.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            if (view4gen || view9gen) return; // Disable resizing for 4 and 9 graph views
+            if (view4gen) {
+                document.getElementById('view4').click(); // Disable resizing for 4 graph views
+            } else if (view9gen) {
+                document.getElementById('view9').click(); // Disable resizing for 9 graph views
+            }
 
             let startX = e.clientX;
             let startY = e.clientY;
@@ -795,13 +881,16 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
                 const minWidth = window.innerWidth * 0.25
                 const minHeight = window.innerHeight * 0.33
-                if (newWidth > minWidth) {
+                const maxWidth = window.innerWidth;
+                const maxHeight = window.innerHeight;
+                if (newWidth > minWidth && newWidth < maxWidth) {
                     container.style.width = newWidth + 'px';
                     container.style.left = newLeft + 'px';
                 }
-                if (newHeight > minHeight) {
+                if (newHeight > minHeight && newHeight < maxHeight) {
                     container.style.height = newHeight + 'px';
                     container.style.top = newTop + 'px';
+                    setMethodsElementSize(container, methodsElement);
                 }
             }
 
@@ -814,11 +903,26 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     /* End of resize functionality */
 
     // Full screen button
+    let isFullScreen = false;
+    let oldWidth, oldHeight, oldLeft, oldTop; // Variables to store the previous dimensions and position of the container
     fullScreenButton.addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-            container.requestFullscreen();
+        if (!isFullScreen) {
+            oldWidth = container.style.width;
+            oldHeight = container.style.height;
+            oldLeft = container.offsetTop;
+            oldTop = container.offsetTop;
+        }
+        if (!isFullScreen) {
+            isFullScreen = true;
+            container.style.width = window.innerWidth + 'px';
+            container.style.height = window.innerHeight + 'px';
+            focusAndCenterContainer(container, false, true)
+            setMethodsElementSize(container, methodsElement);
         } else {
-            document.exitFullscreen();
+            isFullScreen = false;
+            container.style.width = oldWidth;
+            container.style.height = oldHeight;
+            focusAndCenterContainer(container, false, null, oldLeft, oldTop);
         }
     });
     /* End of container elements' functionality - Use force, show grid and close button implemented after creation of the elements */
@@ -1117,22 +1221,86 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         .attr('fill', 'none')
         .attr('stroke', edgeColor)
         .attr('stroke-width', 1.5)
-        .attr('marker-end', directed ? `url(#${arrowId})` : null);
+        .attr('marker-end', d => directed ? `url(#${arrowId}-${d.source.id}-${d.target.id})` : null)
+        .on('contextmenu', function (event, d) {
+            console.log(`${arrowId}-${d.source.id}-${d.target.id}`)
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Create context menu
+            const menu = document.createElement('div');
+            menu.className = 'methodsDiv';
+            menu.style.position = 'fixed';
+            menu.style.left = `${event.clientX}px`;
+            menu.style.top = `${event.clientY}px`;
+            menu.style.zIndex = 10000;
+
+            // Delete link option
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete link';
+            deleteBtn.onclick = () => {
+                // Remove the edge from the edges array
+                const idx = edges.indexOf(d);
+                if (idx !== -1) {
+                    edges.splice(idx, 1);
+                    edgesRaw.splice(idx, 1);
+                }
+                // Remove from raw edges as well if needed
+                const rawIdx = edgesRaw.indexOf(d);
+                if (rawIdx !== -1) {
+                    edgesRaw.splice(rawIdx, 1);
+                }
+                // Remove the link visually
+                d3.select(this).remove();
+                // Remove edge label if present
+                if (edgeLabel) {
+                    edgeLabel.filter(e => e === d).remove();
+                }
+                // Remove context menu
+                menu.remove();
+            };
+            menu.appendChild(deleteBtn);
+
+            // Remove menu on click elsewhere
+            function removeMenu(e) {
+                if (!menu.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener('mousedown', removeMenu);
+                }
+            }
+            document.addEventListener('mousedown', removeMenu, { once: true });
+
+            document.body.appendChild(menu);
+        })
+        .on('mouseover', function () {
+            d3.select(this).attr('stroke', hoverColor);
+        })
+        .on('mouseout', function () {
+            d3.select(this).attr('stroke', edgeColor);
+        })
+
 
     // Draw arrowhead markers (Directed edges)
     if (directed) {
-        svg.append('defs')
-            .append('marker')
-            .attr('id', arrowId)
-            .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 25)
-            .attr('refY', 0)
-            .attr('markerWidth', 8)
-            .attr('markerHeight', 8)
-            .attr('orient', 'auto')
-            .append('path')
-            .attr('d', 'M0,-5L10,0L0,5')
-            .attr('fill', edgeColor);
+        // Create a unique marker for each edge
+        edges.forEach((edge, i) => {
+            const uniqueArrowId = `${arrowId}-${edge.source.id}-${edge.target.id}`;
+            svg.append('defs')
+                .append('marker')
+                .attr('id', uniqueArrowId)
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', 25)
+                .attr('refY', 0)
+                .attr('markerWidth', 8)
+                .attr('markerHeight', 8)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('d', 'M0,-5L10,0L0,5')
+                .attr('fill', edgeColor);
+        });
+
+        // Update marker-end for each link to use its unique arrow
+        // link.attr('marker-end', d => `url(#${arrowId}-${d.source.id || d.source}-${d.target.id || d.target})`);
     }
 
     // Draw nodes - Drawing nodes after links so that they appear in front
@@ -1153,7 +1321,58 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
                 .on('start', function (event, d) { dragStarted(event, d, simulation, this); })
                 .on('drag', function (event, d) { dragged(event, d, this); })
                 .on('end', function (event, d) { dragEnded(event, d, simulation, useForceCheckbox.checked, this); })
-        );
+        )
+        .on('contextmenu', function (event, d) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Create context menu
+            const menu = document.createElement('div');
+            menu.className = 'methodsDiv';
+            menu.style.position = 'fixed';
+            menu.style.left = `${event.clientX}px`;
+            menu.style.top = `${event.clientY}px`;
+            menu.style.zIndex = 10000;
+
+            // Delete node option
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete node';
+            deleteBtn.onclick = () => {
+                // Remove the node from the nodes array
+                const idx = nodes.indexOf(d);
+                if (idx !== -1) {
+                    nodes.splice(idx, 1);
+                    edges = edges.filter(edge => edge.source !== d && edge.target !== d); // Remove edges connected to this node
+                    edgesRaw = edgesRaw.filter(edge => edge.source !== d && edge.target !== d); // Remove from raw edges as well
+                }
+                // Remove the node visually
+                d3.select(this).remove();
+                // Remove labels associated with this node
+                label.filter(l => l === d).remove();
+                if (edgeLabel) {
+                    edgeLabel.filter(e => e.source === d || e.target === d).remove();
+                }
+                // Remove edges that go to and from this node
+                link.filter(l => l.source === d || l.target === d).remove();
+                // Update edges and edgesRaw
+                edges = edges.filter(edge => edge.source.id !== d.id && edge.target.id !== d.id);
+                edgesRaw = edgesRaw.filter(edge => edge.source !== d.id && edge.target !== d.id);
+                // Remove context menu
+                menu.remove();
+            };
+            menu.appendChild(deleteBtn);
+
+            // Remove menu on click elsewhere
+            function removeMenu(e) {
+                if (!menu.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener('mousedown', removeMenu);
+                }
+            }
+            document.addEventListener('mousedown', removeMenu, { once: true });
+
+            document.body.appendChild(menu);
+        });
 
     // Add labels for nodes
     const label = svg.selectAll('text')
