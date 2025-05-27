@@ -12,7 +12,7 @@ let availableGraphs = [];
 
 // Graph style details
 const edgeColor = '#a3bf60'; // Color of the links between nodes
-const edgeColorHover = '#ff0000'; // Color of the links when hovered on
+const edgeColorHover = '#9e7bb0'; // Color of the links when hovered on
 const hoverColor = '#7a9ec2'; // Color of nodes when hovered on
 const nodeColor = '#ffc66d'; // Color of the nodes
 const nodeLabelColor = '#000'; // Color of the text on the nodes
@@ -262,76 +262,78 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
     });
 
     if (directed) {
-        link.each(function (d) {
-            const path = d3.select(this);
-            const dx = d.target.x - d.source.x;
-            const dy = d.target.y - d.source.y;
-            const length = Math.sqrt(dx * dx + dy * dy); // Arc radius
-
-            // Calculate the tangent angle at the end of the arc - used to rotate directed markers based on the edge curving
-            const angle = Math.atan2(dy, dx) + Math.PI / (smoothFunction(length));
-
-            // Create a unique marker ID for each arrow
-            const uniqueArrowId = `${arrowId}-${d.source.id}-${d.target.id}`;
-
-            // Append a unique marker for this edge if it doesn't already exist
-            if (!svg.select(`#${uniqueArrowId}`).node()) {
-                svg.append('defs')
-                    .append('marker')
-                    .attr('id', uniqueArrowId)
-                    .attr('viewBox', '0 -5 10 10')
-                    .attr('refX', 25)
-                    .attr('refY', 0)
-                    .attr('markerWidth', 8)
-                    .attr('markerHeight', 8)
-                    .attr('orient', 'auto')
-                    .append('path')
-                    .attr('d', 'M0,-5L10,0L0,5')
-                    .attr('fill', edgeColor);
-            }
-
-            // Update the marker-end attribute of the path to use the unique marker to match the curve of bidirectional edge
-            path.attr('marker-end', `url(#${uniqueArrowId})`);
-
-            // Update the orient attribute of the unique marker
-            if (d.bidirectional) {
-                svg.select(`#${uniqueArrowId}`)
-                    .attr('orient', angle * (180 / Math.PI)); // Convert radians to degrees
-            }
-        });
-    }
-
-    // Add weights if weighted
-    if (weighted) {
-        edgeLabel
-            .attr('x', d => {
-                const midpointX = (d.source.x + d.target.x) / 2;
+        if (link.attr('class') === 'link') {
+            link.each(function (d) {
+                const path = d3.select(this);
                 const dx = d.target.x - d.source.x;
                 const dy = d.target.y - d.source.y;
-                const length = Math.sqrt(dx * dx + dy * dy);
-                const angle = Math.atan2(dy, dx);
-                if (d.bidirectional) {
-                    const offsetX = Math.sin(angle) * length / 10;
-                    return midpointX + offsetX;
+                const length = Math.sqrt(dx * dx + dy * dy); // Arc radius
+
+                // Calculate the tangent angle at the end of the arc - used to rotate directed markers based on the edge curving
+                const angle = Math.atan2(dy, dx) + Math.PI / (smoothFunction(length));
+
+                // Create a unique marker ID for each arrow
+                const uniqueArrowId = `${arrowId}-${d.source.id}-${d.target.id}`;
+
+                // Append a unique marker for this edge if it doesn't already exist
+                if (!svg.select(`#${uniqueArrowId}`).node()) {
+                    svg.append('defs')
+                        .append('marker')
+                        .attr('id', uniqueArrowId)
+                        .attr('viewBox', '0 -5 10 10')
+                        .attr('refX', 25)
+                        .attr('refY', 0)
+                        .attr('markerWidth', 8)
+                        .attr('markerHeight', 8)
+                        .attr('orient', 'auto')
+                        .append('path')
+                        .attr('d', 'M0,-5L10,0L0,5')
+                        .attr('fill', edgeColor);
                 }
-                return midpointX;
-            })
-            .attr('y', d => {
-                const midpointY = (d.source.y + d.target.y) / 2;
-                const dx = d.target.x - d.source.x;
-                const dy = d.target.y - d.source.y;
-                const length = Math.sqrt(dx * dx + dy * dy);
-                const angle = Math.atan2(dy, dx);
+
+                // Update the marker-end attribute of the path to use the unique marker to match the curve of bidirectional edge
+                path.attr('marker-end', `url(#${uniqueArrowId})`);
+
+                // Update the orient attribute of the unique marker
                 if (d.bidirectional) {
-                    const offsetY = -Math.cos(angle) * length / 10;
-                    return midpointY + offsetY;
+                    svg.select(`#${uniqueArrowId}`)
+                        .attr('orient', angle * (180 / Math.PI)); // Convert radians to degrees
                 }
-                return midpointY;
             });
-    }
+        }
 
-    node.attr('cx', d => d.x).attr('cy', d => d.y);
-    label.attr('x', d => d.x).attr('y', d => d.y);
+        // Add weights if weighted
+        if (weighted) {
+            edgeLabel
+                .attr('x', d => {
+                    const midpointX = (d.source.x + d.target.x) / 2;
+                    const dx = d.target.x - d.source.x;
+                    const dy = d.target.y - d.source.y;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx);
+                    if (d.bidirectional) {
+                        const offsetX = Math.sin(angle) * length / 10;
+                        return midpointX + offsetX;
+                    }
+                    return midpointX;
+                })
+                .attr('y', d => {
+                    const midpointY = (d.source.y + d.target.y) / 2;
+                    const dx = d.target.x - d.source.x;
+                    const dy = d.target.y - d.source.y;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx);
+                    if (d.bidirectional) {
+                        const offsetY = -Math.cos(angle) * length / 10;
+                        return midpointY + offsetY;
+                    }
+                    return midpointY;
+                });
+        }
+
+        node.attr('cx', d => d.x).attr('cy', d => d.y);
+        label.attr('x', d => d.x).attr('y', d => d.y);
+    }
 }
 /* End of align edges */
 
@@ -522,6 +524,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     // Input Validation - Parse edges
     let edges = parseEdges(edgesInput);
     let edgesRaw = parseEdges(edgesInput);
+    console.log("edgesraw", edgesRaw);
     if (edges.length === 0) {
         return;
     }
@@ -561,6 +564,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
                         resultContainer.innerHTML = `<font style="color: #ffc66d;">DFS through ${displayName}${dfsSource ? ` with ${dfsSource} as source node` : ''}: </font> ${result}`;
                         methodsElement.appendChild(resultContainer);
                         methodsElement.style.display = 'block';
+                        methodsElement.scrollTop = methodsElement.scrollHeight; // Scroll to the bottom of the methodsElement
                     } else {
                         resultContainer.remove();
                     }
@@ -640,6 +644,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
                 default:
                     alert("Algorithm not implemented.");
             }
+            methodsElement.scrollTop = methodsElement.scrollHeight; // Scroll to the bottom of the methodsElement
         });
 
         methodsDiv.appendChild(button);
@@ -773,6 +778,14 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     container.addEventListener('contextmenu', function (event) {
         event.preventDefault();
 
+        if (
+            event.target.closest('.link') ||
+            event.target.closest('.link2') ||
+            event.target.closest('.methodsDiv')
+        ) {
+            return;
+        }
+
         // Create context menu
         const menu = document.createElement('div');
         menu.className = 'methodsDiv'
@@ -781,9 +794,10 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         menu.style.top = `${event.clientY}px`;
 
         // Helper to add menu items
-        function addMenuItem(label, onClick) {
+        function addMenuItem(label, title, onClick) {
             const item = document.createElement('button');
             item.textContent = label;
+            item.title = title
             item.addEventListener('click', () => {
                 onClick();
                 menu.remove();
@@ -792,7 +806,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         }
 
         // Reset zoom
-        addMenuItem('Reset Zoom', () => {
+        addMenuItem('Reset window zoom', 'Set the window size as it initially was', () => {
             if (view9gen) {
                 container.style.width = '25%';
                 container.style.height = '33.33%';
@@ -803,17 +817,17 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         });
 
         // Focus (center and bring to front)
-        addMenuItem('Focus', () => {
+        addMenuItem('Focus', 'Bring this window to the center of the screen', () => {
             focusAndCenterContainer(container);
         });
 
         // Hide container
-        addMenuItem('Hide', () => {
+        addMenuItem('Hide', 'Hide this graph', () => {
             showHideGraph.click();
         });
 
         // Delete container
-        addMenuItem('Delete', () => {
+        addMenuItem('Delete', 'Delete this graph', () => {
             deleteThisGraph.click()
         });
 
@@ -1211,10 +1225,13 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
     /* Drawing the graph */
     // Draw links
-    const link = svg.selectAll('path')
+    const link = svg.selectAll('.link')
         .data(edges)
         .enter()
         .append('path')
+        .attr('class', 'link')
+        .attr('source-id', d => `${arrowId}${d.source.id}`)
+        .attr('target-id', d => `${arrowId}${d.target.id}`)
         .attr('fill', 'none')
         .attr('stroke', edgeColor)
         .attr('stroke-width', 1.5)
@@ -1269,6 +1286,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
             menu.style.zIndex = 10000;
 
             // Delete link option
+            // Delete edge button
             const deleteBtn = document.createElement('button');
             deleteBtn.textContent = 'Delete this edge';
             deleteBtn.onclick = () => {
@@ -1289,10 +1307,43 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
                 if (edgeLabel) {
                     edgeLabel.filter(e => e === d).remove();
                 }
+                d3.select(svgElement)
+                    .selectAll('.link2')
+                    .filter(e => e === d)
+                    .remove();
                 // Remove context menu
                 menu.remove();
             };
             menu.appendChild(deleteBtn);
+
+            // Change edge weight button
+            const changeWeightBtn = document.createElement('button');
+            changeWeightBtn.textContent = 'Change edge weight';
+            changeWeightBtn.onclick = () => {
+                let newWeight = parseFloat(prompt('Enter new weight for this edge:', d.weight));
+                if (newWeight !== null) {
+                    if (typeof newWeight !== 'number' || isNaN(newWeight)) {
+                        menu.remove();
+                        alert('Weight must be a valid number.');
+                        return;
+                    }
+                    d.weight = newWeight;
+                    // Update edgeLabel if present
+                    if (edgeLabel) {
+                        edgeLabel
+                            .filter(e => e === d)
+                            .text(newWeight);
+                    }
+                    // Also update in edgesRaw if possible
+                    const raw = edgesRaw.find(e =>
+                        e.source === (d.source.id || d.source) &&
+                        e.target === (d.target.id || d.target)
+                    );
+                    if (raw) raw.weight = newWeight;
+                }
+                menu.remove();
+            };
+            menu.appendChild(changeWeightBtn);
 
             // Remove menu on click elsewhere
             function removeMenu(e) {
@@ -1305,6 +1356,37 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
             document.body.appendChild(menu);
         })
+
+    // Buffer size for edge hover
+    const link2 = svg.selectAll('.link2')
+        .data(edges)
+        .enter()
+        .append('path')
+        .attr('class', 'link2')
+        .attr('fill', 'none')
+        .attr('stroke', 'transparent')
+        .attr('stroke-width', 20)
+        .style('pointer-events', 'stroke')  // Make only the stroke area interactive
+        .lower()
+        .on('mouseover', function (event, d) {
+            // Forward hover to corresponding `.link`
+            const selector = `.link[source-id='${arrowId}${d.source.id}'][target-id='${arrowId}${d.target.id}']`;
+            d3.select(selector).dispatch('mouseover');
+        })
+        .on('mouseout', function (event, d) {
+            const selector = `.link[source-id='${arrowId}${d.source.id}'][target-id='${arrowId}${d.target.id}']`;
+            d3.select(selector).dispatch('mouseout');
+        })
+        .on('contextmenu', function (event, d) {
+            const selector = `.link[source-id='${arrowId}${d.source.id}'][target-id='${arrowId}${d.target.id}']`;
+            d3.select(selector).node().dispatchEvent(new MouseEvent('contextmenu', {
+                bubbles: false,
+                cancelable: true,
+                clientX: event.clientX,
+                clientY: event.clientY,
+                view: window
+            }));
+        });
 
     // Draw nodes - Drawing nodes after links so that they appear in front
     const node = svg.selectAll('circle')
@@ -1400,7 +1482,8 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
             .attr('class', 'edge-label')
             .attr('font-size', 18)
             .attr('fill', edgeWeightColor)
-            .text(d => d.weight);
+            .text(d => d.weight)
+            .style('pointer-events', 'none')
     }
     /* End of graph drawing */
 
@@ -1413,6 +1496,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     // Update positions on simulation
     simulation.on('tick', () => {
         setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
+        setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId);
     });
 
     /* Auto-rearrange nodes functionality */
@@ -1423,6 +1507,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
         // Update link positions
         setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
+        setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId);
         adjustViewBox(svg, nodes, grid);
         drawGrid(svg, grid);
 

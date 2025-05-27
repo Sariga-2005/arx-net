@@ -6,72 +6,6 @@ document.getElementById('edges').addEventListener('keydown', function (event) {
     }
 });
 
-/* Show controls common to all graphs on right click */
-outliner.addEventListener('contextmenu', function (event) {
-    // event.preventDefault(); // Prevent the default context menu
-
-    // Get the mouse position relative to the viewport
-    const x = event.clientX - 50;
-    const y = event.clientY - 10;
-
-    // Get the dimensions of the viewport and the menu
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const menuWidth = allGraphControls.offsetWidth;
-    const menuHeight = allGraphControls.offsetHeight;
-
-    // Calculate the maximum allowed position to keep the menu within the viewport
-    const maxX = viewportWidth - menuWidth;
-    const maxY = viewportHeight - menuHeight;
-
-    // Adjust the menu position to stay within bounds
-    allGraphControls.style.left = `${Math.min(Math.max(x, 0), maxX)}px`;
-    allGraphControls.style.top = `${Math.min(Math.max(y, 0), maxY)}px`;
-
-    // Display the menu
-    allGraphControls.style.display = 'block';
-});
-
-// Hide the menu when clicking outside
-allGraphControls.addEventListener('mouseleave', function () {
-    allGraphControls.style.display = 'none';
-});
-/* End of show controls common to all graphs on right click */
-
-/* Add functionality to the controls */
-document.getElementById('closeAll').addEventListener('click', function () {
-    outliner.querySelectorAll('.showHideDeleteDiv').forEach(item => {
-        const eyeBtn = item.querySelector('button:nth-last-child(2)'); // Second last button is the visibility button
-        if (eyeBtn && eyeBtn.querySelector('img')?.src.endsWith('show.png')) {
-            eyeBtn.click();
-        }
-    });
-    allGraphControls.style.display = 'none';
-});
-
-document.getElementById('showAll').addEventListener('click', function () {
-    outliner.querySelectorAll('.showHideDeleteDiv').forEach(item => {
-        const eyeBtn = item.querySelector('button:nth-last-child(2)'); // Last button is the visibility button
-        if (eyeBtn && eyeBtn.querySelector('img')?.src.endsWith('hide.png')) {
-            eyeBtn.click();
-        }
-    });
-    allGraphControls.style.display = 'none';
-});
-
-document.getElementById('clearAll').addEventListener('click', function () {
-    if (confirm('Are you sure you want to delete all graphs? (This action cannot be undone)')) {
-        document.querySelectorAll('.graphContainer').forEach(function (item) {
-            item.remove();
-        });
-        document.querySelectorAll('.showHideDeleteDiv').forEach(function (item) {
-            item.remove();
-        });
-    }
-    allGraphControls.style.display = 'none';
-});
-/* End of add functionality to the controls */
-
 const view4 = document.getElementById('view4');
 const view9 = document.getElementById('view9');
 const snap = document.getElementById('snap')
@@ -119,7 +53,26 @@ snap.addEventListener('click', function () {
     img.src = snapping ? 'enablesnap.png' : 'disablesnap.png';
 });
 
-// Enable if sidebar hiding code is required
-// document.getElementById('sidebar').addEventListener('click', function () {
-//     containerAll.style.display = containerAll.style.display === 'none' ? 'block' : 'none';
-// });
+
+const aboutBtn = document.getElementById('about');
+const aboutDiv = document.getElementById('aboutDiv');
+
+function handleOutsideClickAbout(event) {
+    if (!aboutDiv.contains(event.target) && event.target !== aboutBtn) {
+        aboutDiv.style.display = 'none';
+        document.removeEventListener('click', handleOutsideClickAbout);
+    }
+}
+
+aboutBtn.addEventListener('click', function (event) {
+    event.stopPropagation();
+    const isVisible = aboutDiv.style.display === 'block';
+    
+    if (isVisible) {
+        aboutDiv.style.display = 'none';
+        document.removeEventListener('click', handleOutsideClickAbout);
+    } else {
+        aboutDiv.style.display = 'block';
+        document.addEventListener('click', handleOutsideClickAbout);
+    }
+});

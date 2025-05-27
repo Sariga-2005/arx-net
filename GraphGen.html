@@ -47,11 +47,54 @@
                 <button id='view9' title='Scale graphs to fit 9 graphs in the space'>
                     <img src='disable9g.png'>
                 </button>
-                <button id = 'snap' title='Snap to increments when moving graph windows. Works only when 4 graph view or 9 graph view is enabled.'>
-                    <img src = "disablesnap.png">
+                <button id='snap'
+                    title='Snap to increments when moving graph windows. Works only when 4 graph view or 9 graph view is enabled.'>
+                    <img src="disablesnap.png">
                 </button>
             </h3>
         </div>
+    </div>
+    <div id='aboutDiv'>
+        <font style="color: #ffc66d; font-weight: bold; font-size:x-large;">Arx Net guide</font>
+        <p>
+            This section provides guidance on how to use the Arx Net application effectively. To know about how the
+            application works, please refer to the documentation.
+        </p>
+
+
+        <font style="color: #ffc66d; font-weight: bold;">Graph Generation:</font>
+        <ul>
+            <li>Enter the graph name and edges in the specified format.</li>
+            <li>The edges can be directed or undirected, and weighted or unweighted.</li>
+            <li>Click on "Generate Graph" to create the graph.</li>
+            <li>Alternatively, click on "Generate random graph" to generate a random graph with the specified
+                number of nodes and edges.</li>
+        </ul>
+
+
+        <font style="color: #ffc66d; font-weight: bold;">Outliner controls:</font>
+        <ul>
+            <li>The outliner displays all the generated graphs.</li>
+            <li>You can minimize, maximize, or clear all graphs using the provided buttons.</li>
+            <li>The "View 4" and "View 9" buttons allow you to scale the graphs to fit 4 or 9 graphs in the
+                available space, respectively.</li>
+            <li>The "Snap" button enables snapping of graph windows to increments when moving them.</li>
+            <li>You can double click on the graph name to edit it, but each graph must have a unique name.</li>
+            <li>Click on the "Focus" button to focus on the graph window, which will bring it to the front and
+                highlight it.</li>
+        </ul>
+
+
+        <font style="color: #ffc66d; font-weight: bold;">Graph window controls:</font>
+        <ul>
+            <li>Use the Left mouse button to interact with the vertices and edges.</li>
+            <li>Use the middle mouse button to pan the graph view.</li>
+            <li>Use the scroll wheel to zoom in and out of the graph.</li>
+            <li>Right clicking on the window or the graph elements will toggle a menu with options corresponding
+                to that element.</li>
+            <li>Double clicking on the window will re-center the graph based on your current view.</li>
+        </ul>
+        Click anywhere outside this window to close the guide.
     </div>
 </body>
 <script>
@@ -60,7 +103,7 @@
     const containerAll = document.querySelector('.container');
 </script>
 <script src='BodyScript.js'></script>
-<script src = "algorithms.js"></script>
+<script src="algorithms.js"></script>
 <script src='GraphGen.js'></script>
 
 </html>

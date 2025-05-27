@@ -2,4 +2,4 @@ some algorithms misbehaving
     - BCC
     - SCC
 
-buffer size for edge hover
+Multiple graphs not working correctly for hover buffer - New hover buffers targeting the new ones and the old ones, but old ones not touching the new ones

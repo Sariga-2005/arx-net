@@ -16,6 +16,23 @@ body {
     text-align: left;
 }
 
+#aboutDiv {
+    display: none;
+    position: absolute;
+    background-color: #141414;
+    top: 50%;
+    left: 37.5%;
+    translate: -50% -50%;
+    width: 35%;
+    height: fit-content;
+    max-height: 90%;
+    overflow-y: auto;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    padding: 20px;
+    border-radius: 20px;
+    z-index: 99999;
+}
+
 p {
     margin: 10px;
 }
@@ -45,25 +62,25 @@ button {
 #generateGraph { /* Generate Graph Button */
     outline: none;
     background-color: #ffc66d;
-    border: 2px solid transparent;
+    border: 1.5px solid transparent;
     color: #000;
-    font-weight: bold;
+    width: calc(100% - 20px);
     padding: 5px 10px;
     margin-top: 20px;
     font-size: 16px;
     border-radius: 3px;
-    transition: background-color 0.3s, color 0.3s;
+    transition: background-color 0.3s, color 0.3s, border 0.3s;
 }
 
 #generateGraph:hover {
     cursor: pointer;
     background-color: transparent;
-    border: 2px solid #ffc66d;
+    border: 1.5px solid #ffc66d;
     color: #ffc66d;
 }
 
-#view4:hover, #view9:hover, #snap:hover {
-    border: 2px solid #ffc66d;
+#view4:hover, #view9:hover, #snap:hover, .showHideDeleteDiv button:hover, #about:hover {
+    background-color: #424242;
 }
 
 .showHideDeleteDiv button,
@@ -84,12 +101,6 @@ h1 button {
     text-align: left;
     margin: 0;
     vertical-align: middle;
-}
-
-.showHideDeleteDiv button:hover,
-h1 button:hover {
-    border: 2px solid #ffc66d;
-    /* background-color: #ffc66d; */
 }
 
 /* Images */
@@ -249,18 +260,16 @@ input[type="checkbox"]:checked::before {
 }
 
 /* Graph Controls */
-.allGraphControls,
 .graphOptions {
     display: none;
     width: auto;
     position: absolute;
-    background-color: #181818;
+    background-color: #1d1d1d;
     border-radius: 8px;
     padding: 5px;
     z-index: 999;
 }
 
-.allGraphControls button,
 .graphOptions button {
     display: block;
     border: none;
@@ -268,18 +277,12 @@ input[type="checkbox"]:checked::before {
     height: auto;
     text-align: left;
     padding: 3px 10px 3px 15px;
-    background-color: #181818;
+    background-color: #1d1d1d;
     color: #fff;
     border-radius: 3px;
 }
 
-.allGraphControls button:hover,
 .graphOptions button:hover {
     background-color: #ffc66d;
     color: black;
-}
-
-.graphOptions {
-    position: absolute;
-    z-index: 999;
 }

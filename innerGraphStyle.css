@@ -51,15 +51,6 @@
     box-sizing: border-box;
 }
 
-.graphHeader button:hover {
-    background-color: #ffc66d;
-    color: black;
-}
-
-.graphOptions button {
-    font-size: 14px;
-}
-
 .graphContent {
     background-color: #1d1d1d;
 }
