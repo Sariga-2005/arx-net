@@ -413,7 +413,7 @@ function smoothFunction(x, k = 0.02, c = 275) {
     return result;
 }
 
-function addGraph(edgesInput = null, inputName = null) { // Core function will all functionalities
+function addGraph(edges = null, edgesRaw = null, inputName = null) { // Core function will all functionalities
     // Common arrow head ID for this graph
     const arrowId = `arrowHead${graphCount}`; // Creating separate arrow heads for each graph, while also grouping the similar ones
     graphCount++;
@@ -434,8 +434,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     const titleName = displayName.length > 10 ? displayName.substring(0, 7) + '...' : displayName;
 
     // Graph value details
-    let edgesInputValue = document.getElementById('edges').value;
-    edgesInput = edgesInputValue == null ? edgesInput : edgesInputValue;
+    edgesInput = document.getElementById('edges').value;
     const directed = document.getElementById('directed').checked;
     const weighted = document.getElementById('weighted').checked;
 
@@ -522,9 +521,14 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     headerSpan.appendChild(rearrangeMethods);
 
     // Input Validation - Parse edges
-    let edges = parseEdges(edgesInput);
-    let edgesRaw = parseEdges(edgesInput);
-    console.log("edgesraw", edgesRaw);
+    if (edges === null) {
+        edges = parseEdges(edgesInput);
+    }
+    if (edgesRaw === null) {
+        edgesRaw = parseEdges(edgesInput);
+    }
+    console.log("edgesraw", typeof(edgesRaw));
+    console.log("edges", edges);
     if (edges.length === 0) {
         return;
     }
@@ -1042,7 +1046,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     duplicateGraph.title = 'Duplicate this graph';
 
     duplicateGraph.addEventListener('click', () => {
-        addGraph(edgesInput, `${displayName} copy`);
+        addGraph(edgesRaw, edgesRaw, `${displayName} copy`);
         graphOptions.style.display = "none";;
     })
 

@@ -29,18 +29,13 @@
                 <input type='checkbox' id='weighted' checked>Weighted
                 <br>
                 <button id='generateGraph' onclick='addGraph()'>Generate Graph</button>
-                <div class='allGraphControls'>
-                    <button id='closeAll'>Minimize all graphs</button>
-                    <button id='showAll'>Show all graphs</button>
-                    <button id='clearAll'>Clear all graphs</button>
-                </div>
             </div>
             <div id='graphList' class='graphList'></div>
         </div>
         <hr style='color: #ccc;'>
         <div class='outliner'>
-            <h3>
-                Graphs
+            <div class='allGraphControls'>
+                <b style="margin-right: 20px; font-size: larger;">Graphs</b>
                 <button id='view4' title='Scale graphs to fit 4 graphs in the space'>
                     <img src='disable4g.png'>
                 </button>
@@ -51,7 +46,14 @@
                     title='Snap to increments when moving graph windows. Works only when 4 graph view or 9 graph view is enabled.'>
                     <img src="disablesnap.png">
                 </button>
-            </h3>
+                <button id='showHideAll' title='Minimize/Maximize all graphs'>
+                    <img src='show.png'>
+                </button>
+                <button id='clearAll' title='Delete all graphs'>
+                    <img src='delete.png'>
+                </button>
+            </div>
+
         </div>
     </div>
     <div id='aboutDiv'>

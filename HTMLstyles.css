@@ -9,10 +9,8 @@ body {
     margin: 0;
     padding: 0;
     overflow-x: hidden;
-
     background-color: #1d1d1d;
     color: #fff;
-
     text-align: left;
 }
 
@@ -77,10 +75,6 @@ button {
     background-color: transparent;
     border: 1.5px solid #ffc66d;
     color: #ffc66d;
-}
-
-#view4:hover, #view9:hover, #snap:hover, .showHideDeleteDiv button:hover, #about:hover {
-    background-color: #424242;
 }
 
 .showHideDeleteDiv button,
@@ -285,4 +279,13 @@ input[type="checkbox"]:checked::before {
 .graphOptions button:hover {
     background-color: #ffc66d;
     color: black;
+}
+
+.allGraphControls {
+    margin-top: 15px;
+    display: inline-block;
+}
+
+.allGraphControls button:hover, .showHideDeleteDiv button:hover, #about:hover {
+    background-color: #424242;
 }

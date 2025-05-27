@@ -1,5 +1,3 @@
-some algorithms misbehaving
-    - BCC
-    - SCC
-
-Multiple graphs not working correctly for hover buffer - New hover buffers targeting the new ones and the old ones, but old ones not touching the new ones
+Graph algorithms are misbehaving
+Duplicate graph functionality not working correctly
+All graph functionalities not yet added
