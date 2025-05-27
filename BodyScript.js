@@ -67,7 +67,7 @@ function handleOutsideClickAbout(event) {
 aboutBtn.addEventListener('click', function (event) {
     event.stopPropagation();
     const isVisible = aboutDiv.style.display === 'block';
-    
+
     if (isVisible) {
         aboutDiv.style.display = 'none';
         document.removeEventListener('click', handleOutsideClickAbout);
@@ -76,3 +76,39 @@ aboutBtn.addEventListener('click', function (event) {
         document.addEventListener('click', handleOutsideClickAbout);
     }
 });
+
+const showHideAll = document.getElementById('showHideAll')
+const clearAll = document.getElementById('clearAll')
+
+let show = true
+showHideAll.addEventListener('click', () => {
+    const allGraphs = document.getElementsByClassName('showHideCurrentGraph');
+    if (show) {
+        Array.from(allGraphs).forEach(itemGraph => {
+            const img = itemGraph.getElementsByTagName('img')[0];
+            if (img && img.src.endsWith('show.png')) {
+                itemGraph.click();
+            }
+        })
+        show = false;
+        showHideAll.getElementsByTagName('img')[0].src = 'hide.png'
+    } else {
+        Array.from(allGraphs).forEach(itemGraph => {
+            const img = itemGraph.getElementsByTagName('img')[0];
+            if (img && img.src.endsWith('hide.png')) {
+                itemGraph.click();
+            }
+        })
+        show = true;
+        showHideAll.getElementsByTagName('img')[0].src = 'show.png'
+    }
+})
+
+clearAll.addEventListener('click', () => {
+    if (confirm("Are you sure want to delete all graphs? This action cannot be undone.")) {
+        const allGraphs = document.getElementsByClassName('deleteCurrentGraph')
+        Array.from(allGraphs).forEach(itemGraph => {
+            itemGraph.click();
+        })
+    }
+})

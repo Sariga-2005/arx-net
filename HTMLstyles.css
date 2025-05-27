@@ -57,7 +57,7 @@ button {
     outline: none;
 }
 
-#generateGraph { /* Generate Graph Button */
+#generateGraph, #generateRandomGraph { /* Generate Graph Button */
     outline: none;
     background-color: #ffc66d;
     border: 1.5px solid transparent;
@@ -65,16 +65,38 @@ button {
     width: calc(100% - 20px);
     padding: 5px 10px;
     margin-top: 20px;
+    margin-bottom: 10px;
     font-size: 16px;
     border-radius: 3px;
     transition: background-color 0.3s, color 0.3s, border 0.3s;
 }
 
-#generateGraph:hover {
+#generateRandomGraph {
+    margin-top: 5px;
+}
+
+#generateGraph:hover, #generateRandomGraph:hover {
     cursor: pointer;
     background-color: transparent;
     border: 1.5px solid #ffc66d;
     color: #ffc66d;
+}
+
+.randomIP {
+    display: block;
+    width: calc(100% - 20px);
+    justify-content: space-between;
+}
+
+#numNodes, #numEdges {
+    display: inline-block;
+    width: 18%;
+    margin: none;
+    padding: 10px;
+    background: none;
+    border: 1.5px solid #ffc66d;
+    color: #fff;
+    outline: none;
 }
 
 .showHideDeleteDiv button,

@@ -168,6 +168,78 @@ function parseEdges(edgesInput) {
     return edgesRaw;
 }
 
+function stringifyEdges(edgesRaw) {
+    return edgesRaw
+        .map(edge => `(${edge.source}_${edge.target}_${edge.weight})`)
+        .join(', ');
+}
+
+const graphInputField = document.getElementById('edges');
+function generateRandomGraphString(vertexCount = 5, edgeCount = 9) {
+    vertexCount = parseInt(vertexCount);
+    edgeCount = parseInt(edgeCount);
+    if (isNaN(vertexCount) || isNaN(edgeCount)) {
+        alert("Vertex and edge counts must be valid numbers.");
+        return;
+    }
+    // Helper: Generate vertex labels like a, b, ..., z, aa, ab, ...
+    function indexToLabel(index) {
+        let label = '';
+        while (index >= 0) {
+            label = String.fromCharCode(97 + (index % 26)) + label;
+            index = Math.floor(index / 26) - 1;
+        }
+        return label;
+    }
+
+    // Generate vertex labels
+    const vertices = [];
+    for (let i = 0; i < vertexCount; i++) {
+        vertices.push(indexToLabel(i));
+    }
+
+    const edges = new Set();
+    const edgeList = [];
+
+    // Step 1: Create a spanning tree to ensure connectivity
+    const shuffled = [...vertices];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    for (let i = 1; i < shuffled.length; i++) {
+        const u = shuffled[i - 1];
+        const v = shuffled[i];
+        const weight = Math.floor(Math.random() * 20) + 1;
+        const key = `${u}_${v}`;
+        edges.add(key);
+        edgeList.push({ source: u, target: v, weight });
+    }
+
+    // Step 2: Add remaining edges randomly (no duplicates or self-loops)
+    while (edgeList.length < edgeCount) {
+        const u = vertices[Math.floor(Math.random() * vertexCount)];
+        const v = vertices[Math.floor(Math.random() * vertexCount)];
+        if (u === v) continue;
+
+        const key1 = `${u}_${v}`;
+        const key2 = `${v}_${u}`;
+        if (edges.has(key1) || edges.has(key2)) continue;
+
+        const weight = Math.floor(Math.random() * 20) + 1;
+        edges.add(key1);
+        edgeList.push({ source: u, target: v, weight });
+    }
+
+    graphInputField.value = stringifyEdges(edgeList); // uses previously defined function
+}
+
+const generateRandomButton = document.getElementById('generateRandomGraph')
+generateRandomButton.addEventListener('click',() => {
+    generateRandomGraphString(document.getElementById('numNodes').value, document.getElementById('numEdges').value)
+})
+
 /* Functions to draw grid */
 // Grid settings
 const gridSize = 40; // Defines the distance between lines
@@ -413,7 +485,7 @@ function smoothFunction(x, k = 0.02, c = 275) {
     return result;
 }
 
-function addGraph(edges = null, edgesRaw = null, inputName = null) { // Core function will all functionalities
+function addGraph(edgesInput = null, inputName = null) { // Core function will all functionalities
     // Common arrow head ID for this graph
     const arrowId = `arrowHead${graphCount}`; // Creating separate arrow heads for each graph, while also grouping the similar ones
     graphCount++;
@@ -434,7 +506,8 @@ function addGraph(edges = null, edgesRaw = null, inputName = null) { // Core fun
     const titleName = displayName.length > 10 ? displayName.substring(0, 7) + '...' : displayName;
 
     // Graph value details
-    edgesInput = document.getElementById('edges').value;
+    let edgesInputValue = document.getElementById('edges').value;
+    edgesInput = edgesInput === null ? edgesInputValue : edgesInput; // Use the provided edgesInput or the value from the input field
     const directed = document.getElementById('directed').checked;
     const weighted = document.getElementById('weighted').checked;
 
@@ -521,14 +594,8 @@ function addGraph(edges = null, edgesRaw = null, inputName = null) { // Core fun
     headerSpan.appendChild(rearrangeMethods);
 
     // Input Validation - Parse edges
-    if (edges === null) {
-        edges = parseEdges(edgesInput);
-    }
-    if (edgesRaw === null) {
-        edgesRaw = parseEdges(edgesInput);
-    }
-    console.log("edgesraw", typeof(edgesRaw));
-    console.log("edges", edges);
+    edges = parseEdges(edgesInput);
+    edgesRaw = parseEdges(edgesInput);
     if (edges.length === 0) {
         return;
     }
@@ -976,7 +1043,6 @@ function addGraph(edges = null, edgesRaw = null, inputName = null) { // Core fun
         if (event.key === 'Enter') {
             nameInput.setAttribute('readonly', true);
             nameInput.classList.remove('editable'); // Remove class
-            console.log(availableGraphs);
 
             // If name already exists in the list of names, then swap the names
             if (availableGraphs.includes(nameInput.value)) {
@@ -1011,6 +1077,7 @@ function addGraph(edges = null, edgesRaw = null, inputName = null) { // Core fun
     // Show/hide graph functionality
     const showHideGraph = document.createElement('button');
     showHideGraph.title = 'Show/hide graph';
+    showHideGraph.className = 'showHideCurrentGraph';
     const showHideImg = document.createElement('img');
     showHideImg.src = 'show.png';
     showHideGraph.appendChild(showHideImg);
@@ -1046,11 +1113,13 @@ function addGraph(edges = null, edgesRaw = null, inputName = null) { // Core fun
     duplicateGraph.title = 'Duplicate this graph';
 
     duplicateGraph.addEventListener('click', () => {
-        addGraph(edgesRaw, edgesRaw, `${displayName} copy`);
-        graphOptions.style.display = "none";;
+        let edgesRawString = stringifyEdges(edgesRaw);
+        addGraph(edgesRawString, `${displayName} copy`);
+        graphOptions.style.display = "none";
     })
 
     const deleteThisGraph = document.createElement('button'); // Delete this graph
+    deleteThisGraph.className = 'deleteCurrentGraph';
     deleteThisGraph.textContent = 'Delete graph';
     deleteThisGraph.title = 'Delete this graph';
     deleteThisGraph.addEventListener('click', () => {
