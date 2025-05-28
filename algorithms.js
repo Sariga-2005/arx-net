@@ -111,7 +111,8 @@ function dijkstra(edges, start = prompt("Enter start vertex"), isDirected = true
         // For undirected graphs, also include reverse:
         if (!isDirected) {
             if (!graph[target]) graph[target] = [];
-            graph[target].push(source);
+            graph[target].push({ target: source, weight });
+
         }
     }
 
@@ -274,6 +275,13 @@ function bellmanFord(edges, start = prompt("Enter start vertex"), isDirected) {
             }
         }
     }
+    for (const { source, target, weight } of edges) {
+    if (distances[source] + weight < distances[target]) {
+        alert("Graph contains a negative weight cycle.");
+        return null;
+    }
+}
+
 
     return `
     <table border="1" cellpadding="5" cellspacing="0">
@@ -301,9 +309,9 @@ function mst(edges) {
     const graph = {};
     for (const { source, target, weight } of edges) {
         if (!graph[source]) graph[source] = [];
-        if (!graph[target]) graph[target] = []; // Needed for undirected graphs
+        if (!graph[target]) graph[target] = [];
         graph[source].push({ target, weight });
-        graph[target].push({ target: source, weight }); // Add reverse for undirected
+        graph[target].push({ target: source, weight }); // undirected
     }
 
     const mstEdges = [];
@@ -319,9 +327,10 @@ function mst(edges) {
 
     while (!queue.isEmpty()) {
         const { element: { source, target, weight } } = queue.dequeue();
+
         if (!visited.has(target)) {
             visited.add(target);
-            mstEdges.push({ source, target, weight });
+            mstEdges.push({ from: source, to: target, weight }); // renamed to `from`, `to` for clarity
 
             for (const { target: neighborTarget, weight: neighborWeight } of graph[target]) {
                 if (!visited.has(neighborTarget)) {
@@ -331,7 +340,16 @@ function mst(edges) {
         }
     }
 
+    printMST(mstEdges);  // 🔥 Print the result directly
     return mstEdges;
+}
+
+// ✅ Print function
+function printMST(mstEdges) {
+    console.log("Minimum Spanning Tree Edges:");
+    mstEdges.forEach(edge => {
+        console.log(`${edge.from} — ${edge.to} [Weight: ${edge.weight}]`);
+    });
 }
 
 function topologicalSort(edges) {
@@ -424,50 +442,56 @@ function StronglyConnectedComponents(edges) {
 
 function BiconnectedComponents(edges) {
     const graph = {};
-    const visited = new Set();
-    const low = {};
-    const disc = {};
-    const parent = {};
-    const bccs = [];
-    let time = 0;
-
     for (const { source, target } of edges) {
         if (!graph[source]) graph[source] = [];
         if (!graph[target]) graph[target] = [];
         graph[source].push(target);
-        graph[target].push(source);
+        graph[target].push(source); // undirected
     }
 
-    function bccDFS(node) {
-        visited.add(node);
-        disc[node] = low[node] = ++time;
+    let time = 0;
+    const disc = {}, low = {}, parent = {};
+    const stack = [];
+    const bcc = [];
+
+    function dfs(u) {
+        disc[u] = low[u] = ++time;
         let children = 0;
 
-        for (const neighbor of graph[node]) {
-            if (!visited.has(neighbor)) {
+        for (const v of graph[u]) {
+            if (!disc[v]) {
+                parent[v] = u;
+                stack.push([u, v]);
                 children++;
-                parent[neighbor] = node;
-                bccDFS(neighbor);
 
-                low[node] = Math.min(low[node], low[neighbor]);
+                dfs(v);
 
-                if ((parent[node] === undefined && children > 1) || (parent[node] !== undefined && low[neighbor] >= disc[node])) {
-                    const bcc = [];
-                    while (bcc.length === 0 || bcc[bcc.length - 1] !== node) {
-                        bcc.push(bcc.pop());
-                    }
-                    bccs.push(bcc);
+                low[u] = Math.min(low[u], low[v]);
+
+                if ((disc[u] === 1 && children > 1) || (disc[u] > 1 && low[v] >= disc[u])) {
+                    const component = [];
+                    let edge;
+                    do {
+                        edge = stack.pop();
+                        component.push(edge);
+                    } while (edge[0] !== u || edge[1] !== v);
+                    bcc.push(component);
                 }
-            } else if (neighbor !== parent[node]) {
-                low[node] = Math.min(low[node], disc[neighbor]);
+            } else if (v !== parent[u] && disc[v] < disc[u]) {
+                low[u] = Math.min(low[u], disc[v]);
+                stack.push([u, v]);
             }
         }
     }
 
     for (const node in graph) {
-        if (!visited.has(node)) {
-            bccDFS(node);
+        if (!disc[node]) {
+            dfs(node);
+            if (stack.length > 0) {
+                bcc.push(stack.splice(0));
+            }
         }
     }
-    return bccs;
+
+    return bcc;
 }

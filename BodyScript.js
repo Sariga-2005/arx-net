@@ -28,6 +28,9 @@ view4.addEventListener('click', function () {
             item.style.height = '50%';
         });
     }
+    document.querySelectorAll('.methodsElem').forEach(item => {
+        item.style.height = '30%';
+    })
 });
 
 view9.addEventListener('click', function () {
@@ -45,6 +48,9 @@ view9.addEventListener('click', function () {
             item.style.height = '33.33%';
         });
     }
+    document.querySelectorAll('.methodsElem').forEach(item => {
+        item.style.height = '30%';
+    })
 });
 
 snap.addEventListener('click', function () {
@@ -112,3 +118,16 @@ clearAll.addEventListener('click', () => {
         })
     }
 })
+
+function updateMinMax(){
+    const updatedValue = parseInt(document.getElementById("numNodes").value);
+    // Check if updatedValue is an integer
+    if (!Number.isInteger(Number(updatedValue))) {
+        alert("Please enter a valid integer for the number of nodes.");
+        document.getElementById("numNodes").value = "";
+        return;
+    }
+    // Update DOM for minVal and maxVal
+    // document.getElementById("minRec").innerHTML = updatedValue - 1;
+    document.getElementById("maxRec").innerHTML = (updatedValue)*(updatedValue - 1)/2;
+}

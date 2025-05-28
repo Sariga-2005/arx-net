@@ -175,14 +175,17 @@ function stringifyEdges(edgesRaw) {
 }
 
 const graphInputField = document.getElementById('edges');
-function generateRandomGraphString(vertexCount = 5, edgeCount = 9) {
-    vertexCount = parseInt(vertexCount);
-    edgeCount = parseInt(edgeCount);
-    if (isNaN(vertexCount) || isNaN(edgeCount)) {
-        alert("Vertex and edge counts must be valid numbers.");
-        return;
-    }
-    // Helper: Generate vertex labels like a, b, ..., z, aa, ab, ...
+
+// Rework
+function generateRandomGraphString(vertexCount, edgeCount, options = {}) {
+    const {
+        allowDuplicates = true,
+        ensureConnected = false, // if false, allows disconnected graphs
+        minWeight = 1,
+        maxWeight = 20
+    } = options;
+
+    // Helper to generate labels: a, b, ..., z, aa, ab, ...
     function indexToLabel(index) {
         let label = '';
         while (index >= 0) {
@@ -192,7 +195,11 @@ function generateRandomGraphString(vertexCount = 5, edgeCount = 9) {
         return label;
     }
 
-    // Generate vertex labels
+    if (vertexCount <= 0) return '';
+    if (!allowDuplicates && edgeCount > vertexCount * (vertexCount - 1)) {
+        throw new Error("Too many edges for simple graph without duplicates.");
+    }
+
     const vertices = [];
     for (let i = 0; i < vertexCount; i++) {
         vertices.push(indexToLabel(i));
@@ -201,34 +208,35 @@ function generateRandomGraphString(vertexCount = 5, edgeCount = 9) {
     const edges = new Set();
     const edgeList = [];
 
-    // Step 1: Create a spanning tree to ensure connectivity
-    const shuffled = [...vertices];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    // Step 1: Create a spanning tree if ensureConnected is true
+    if (ensureConnected && vertexCount > 1 && edgeCount >= vertexCount - 1) {
+        const shuffled = [...vertices];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        for (let i = 1; i < shuffled.length; i++) {
+            const u = shuffled[i - 1];
+            const v = shuffled[i];
+            const weight = Math.floor(Math.random() * (maxWeight - minWeight + 1)) + minWeight;
+            const key = `${u}_${v}`;
+            edges.add(key);
+            edgeList.push({ source: u, target: v, weight });
+        }
     }
 
-    for (let i = 1; i < shuffled.length; i++) {
-        const u = shuffled[i - 1];
-        const v = shuffled[i];
-        const weight = Math.floor(Math.random() * 20) + 1;
-        const key = `${u}_${v}`;
-        edges.add(key);
-        edgeList.push({ source: u, target: v, weight });
-    }
-
-    // Step 2: Add remaining edges randomly (no duplicates or self-loops)
+    // Step 2: Add remaining edges (with or without duplicates)
     while (edgeList.length < edgeCount) {
         const u = vertices[Math.floor(Math.random() * vertexCount)];
         const v = vertices[Math.floor(Math.random() * vertexCount)];
-        if (u === v) continue;
+        if (u === v) continue; // no self-loops
 
-        const key1 = `${u}_${v}`;
-        const key2 = `${v}_${u}`;
-        if (edges.has(key1) || edges.has(key2)) continue;
+        const key = `${u}_${v}`;
+        if (!allowDuplicates && edges.has(key)) continue;
 
-        const weight = Math.floor(Math.random() * 20) + 1;
-        edges.add(key1);
+        const weight = Math.floor(Math.random() * (maxWeight - minWeight + 1)) + minWeight;
+        if (!allowDuplicates) edges.add(key);
         edgeList.push({ source: u, target: v, weight });
     }
 
@@ -236,8 +244,10 @@ function generateRandomGraphString(vertexCount = 5, edgeCount = 9) {
 }
 
 const generateRandomButton = document.getElementById('generateRandomGraph')
-generateRandomButton.addEventListener('click',() => {
-    generateRandomGraphString(document.getElementById('numNodes').value, document.getElementById('numEdges').value)
+generateRandomButton.addEventListener('click', () => {
+    const vertexCount = document.getElementById('numNodes').value
+    const edgeCount = document.getElementById('numEdges').value
+    generateRandomGraphString(vertexCount, edgeCount)
 })
 
 /* Functions to draw grid */
@@ -321,7 +331,7 @@ function adjustViewBox(svg, nodes, grid) { // Takes grid as a parameter to redra
 /* End of viewbox adjustment */
 
 /* Function to align edges */
-function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId) {
+function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer) {
     link.attr('d', d => {
         // Arc bidirectional edges
         if (d.bidirectional) {
@@ -340,9 +350,6 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
                 const dx = d.target.x - d.source.x;
                 const dy = d.target.y - d.source.y;
                 const length = Math.sqrt(dx * dx + dy * dy); // Arc radius
-
-                // Calculate the tangent angle at the end of the arc - used to rotate directed markers based on the edge curving
-                const angle = Math.atan2(dy, dx) + Math.PI / (smoothFunction(length));
 
                 // Create a unique marker ID for each arrow
                 const uniqueArrowId = `${arrowId}-${d.source.id}-${d.target.id}`;
@@ -368,8 +375,13 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
 
                 // Update the orient attribute of the unique marker
                 if (d.bidirectional) {
+                    // Calculate the tangent angle at the end of the arc - used to rotate directed markers based on the edge curving
+                    const angle = Math.atan2(dy, dx) + Math.PI / (smoothFunction(length));
                     svg.select(`#${uniqueArrowId}`)
                         .attr('orient', angle * (180 / Math.PI)); // Convert radians to degrees
+                } else {
+                    svg.select(`#${uniqueArrowId}`)
+                        .attr('orient', 'auto');
                 }
             });
         }
@@ -383,7 +395,8 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
                     const dy = d.target.y - d.source.y;
                     const length = Math.sqrt(dx * dx + dy * dy);
                     const angle = Math.atan2(dy, dx);
-                    if (d.bidirectional) {
+                    if (d.bidirectional === true) {
+                        console.log(d.source.id, d.target.id, d.bidirectional)
                         const offsetX = Math.sin(angle) * length / 10;
                         return midpointX + offsetX;
                     }
@@ -395,7 +408,7 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
                     const dy = d.target.y - d.source.y;
                     const length = Math.sqrt(dx * dx + dy * dy);
                     const angle = Math.atan2(dy, dx);
-                    if (d.bidirectional) {
+                    if (d.bidirectional === true) {
                         const offsetY = -Math.cos(angle) * length / 10;
                         return midpointY + offsetY;
                     }
@@ -480,8 +493,9 @@ function dragEnded(event, d, simulation, useForce, thisNode) {
 // Supporting function that will be used to rotate arrows based on edge direction
 function smoothFunction(x, k = 0.02, c = 275) {
     const exponent = -k * (x - c);
+    console.log("x ",x,"  ","exp ",exponent)
     const denominator = 1 + Math.exp(exponent);
-    const result = 10 - (2 / denominator);
+    const result = 10 - (2.4 / denominator);
     return result;
 }
 
@@ -507,7 +521,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
     // Graph value details
     let edgesInputValue = document.getElementById('edges').value;
-    edgesInput = edgesInput === null ? edgesInputValue : edgesInput; // Use the provided edgesInput or the value from the input field
+    edgesInput = edgesInput === null ? edgesInputValue.toUpperCase() : edgesInput; // Use the provided edgesInput or the value from the input field
     const directed = document.getElementById('directed').checked;
     const weighted = document.getElementById('weighted').checked;
 
@@ -618,7 +632,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
             let resultContainer = document.createElement('p')
             switch (algorithm.name) {
                 case 'bfs':
-                    let bfsSource = prompt("Enter source vertex");
+                    let bfsSource = prompt("Enter source vertex").toUpperCase();
                     result = bfs(edgesRaw, bfsSource, directed);
                     if (result !== null) {
                         resultContainer.innerHTML = `<font style="color: #ffc66d;">BFS with ${bfsSource} as source node: </font> ${result}`;
@@ -629,7 +643,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
                     }
                     break;
                 case 'dfs':
-                    let dfsSource = prompt("Enter source vertex");
+                    let dfsSource = prompt("Enter source vertex").toUpperCase();
                     result = dfs(edgesRaw, dfsSource || undefined, directed);
                     if (result !== null) {
                         resultContainer.innerHTML = `<font style="color: #ffc66d;">DFS through ${displayName}${dfsSource ? ` with ${dfsSource} as source node` : ''}: </font> ${result}`;
@@ -641,7 +655,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
                     }
                     break;
                 case 'dijkstra':
-                    let dijkstraSource = prompt("Enter source vertex");
+                    let dijkstraSource = prompt("Enter source vertex").toUpperCase();
                     result = dijkstra(edgesRaw, dijkstraSource, directed);
                     if (result !== null) {
                         resultContainer.innerHTML = `<font style="color: #ffc66d;">Dijkstra's through ${displayName} with ${dijkstraSource} as source node: </font> <br> ${result} <br>`;
@@ -662,7 +676,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
                     }
                     break;
                 case 'bellmanFord':
-                    let bellmanSource = prompt("Enter source vertex");
+                    let bellmanSource = prompt("Enter source vertex").toUpperCase();
                     result = bellmanFord(edgesRaw, bellmanSource, directed);
                     if (result !== null) {
                         resultContainer.innerHTML = `<font style="color: #ffc66d;">Bellman Ford through ${displayName} with ${bellmanSource} as source node: </font> ${result}`;
@@ -1296,9 +1310,14 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         }
     });
 
+    const edgeLayer = svg.append('g').attr('id', 'edge-layer');
+    const edgeBufferLayer = svg.append('g').attr('id', 'edge-buffer-layer');
+    const nodeLayer = svg.append('g').attr('id', 'node-layer');
+    const labelLayer = svg.append('g').attr('id', 'label-layer');
+
     /* Drawing the graph */
     // Draw links
-    const link = svg.selectAll('.link')
+    let link = edgeLayer.selectAll('.link')
         .data(edges)
         .enter()
         .append('path')
@@ -1386,6 +1405,21 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
                     .remove();
                 // Remove context menu
                 menu.remove();
+
+                // If edge was bidirectional, update the reverse edge's bidirectionality
+                if (d.bidirectional) {
+                    // Find the reverse edge (target->source)
+                    const reverseEdge = edges.find(e =>
+                        (e.source.id || e.source) === (d.target.id || d.target) &&
+                        (e.target.id || e.target) === (d.source.id || d.source)
+                    );
+                    if (reverseEdge) {
+                        reverseEdge.bidirectional = false;
+                        d.bidirectional = false;
+                    }
+                }
+                setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+                setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
             };
             menu.appendChild(deleteBtn);
 
@@ -1431,7 +1465,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         })
 
     // Buffer size for edge hover
-    const link2 = svg.selectAll('.link2')
+    let link2 = edgeBufferLayer.selectAll('.link2')
         .data(edges)
         .enter()
         .append('path')
@@ -1440,7 +1474,6 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         .attr('stroke', 'transparent')
         .attr('stroke-width', 20)
         .style('pointer-events', 'stroke')  // Make only the stroke area interactive
-        .lower()
         .on('mouseover', function (event, d) {
             // Forward hover to corresponding `.link`
             const selector = `.link[source-id='${arrowId}${d.source.id}'][target-id='${arrowId}${d.target.id}']`;
@@ -1462,7 +1495,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         });
 
     // Draw nodes - Drawing nodes after links so that they appear in front
-    const node = svg.selectAll('circle')
+    const node = nodeLayer.selectAll('circle')
         .data(nodes)
         .enter()
         .append('circle')
@@ -1520,6 +1553,239 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
             };
             menu.appendChild(deleteBtn);
 
+            // Create new edge
+            const newEdgeButton = document.createElement('button');
+            newEdgeButton.textContent = 'Create new edge from this vertex';
+            newEdgeButton.onclick = () => {
+                let targetId = prompt("Enter target vertex id:").toUpperCase();
+                if (!targetId) {
+                    menu.remove();
+                    return;
+                }
+                const targetNode = nodes.find(n => n.id === targetId);
+                if (!targetNode) {
+                    menu.remove();
+                    alert("Target vertex does not exist.");
+                    return;
+                }
+                let weight = 1;
+                if (weighted) {
+                    let w = prompt("Enter weight for this edge:", "1");
+                    if (w === null) {
+                        menu.remove();
+                        return;
+                    }
+                    weight = parseFloat(w);
+                    if (isNaN(weight)) {
+                        alert("Invalid weight.");
+                        menu.remove();
+                        return;
+                    }
+                }
+                // Check if the reverse edge exists (i.e., bidirectional)
+                const reverseEdge = edges.find(e => e.source === targetNode && e.target === d);
+                if (reverseEdge) {
+                    // Mark both edges as bidirectional
+                    edges.push({ source: d, target: targetNode, weight, bidirectional: true });
+                    reverseEdge.bidirectional = true;
+                } else {
+                    edges.push({ source: d, target: targetNode, weight });
+                }
+
+                edgesRaw.push({ source: d.id, target: targetNode.id, weight });
+                // Re-bind data and redraw links and edge labels
+                link = edgeLayer.selectAll('.link')
+                    .data(edges)
+                    .join(
+                        enter => enter.append('path')
+                            .attr('class', 'link')
+                            .attr('source-id', d => `${arrowId}${d.source.id}`)
+                            .attr('target-id', d => `${arrowId}${d.target.id}`)
+                            .attr('fill', 'none')
+                            .attr('stroke', edgeColor)
+                            .attr('stroke-width', 1.5)
+                            .on('mouseover', function () {
+                                d3.select(this).attr('stroke', edgeColorHover);
+                                // Also change color of the directed marker (arrowhead) if present
+                                if (directed) {
+                                    const markerUrl = d3.select(this).attr('marker-end');
+                                    if (markerUrl) {
+                                        // Extract marker id from url(#markerId)
+                                        const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
+                                        if (markerIdMatch) {
+                                            const markerId = markerIdMatch[1];
+                                            // Change the fill color of the marker's path
+                                            d3.select(svgElement)
+                                                .select(`#${markerId}`)
+                                                .select('path')
+                                                .attr('fill', edgeColorHover);
+                                        }
+                                    }
+                                }
+                            })
+                            .on('mouseout', function () {
+                                d3.select(this).attr('stroke', edgeColor);
+                                // Also reset color of the directed marker (arrowhead) if present
+                                if (directed) {
+                                    const markerUrl = d3.select(this).attr('marker-end');
+                                    if (markerUrl) {
+                                        // Extract marker id from url(#markerId)
+                                        const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
+                                        if (markerIdMatch) {
+                                            const markerId = markerIdMatch[1];
+                                            // Reset the fill color of the marker's path
+                                            d3.select(svgElement)
+                                                .select(`#${markerId}`)
+                                                .select('path')
+                                                .attr('fill', edgeColor);
+                                        }
+                                    }
+                                }
+                            })
+                            .on('contextmenu', function (event, d) {
+                                event.preventDefault();
+                                event.stopPropagation();
+
+                                // Create context menu
+                                const menu = document.createElement('div');
+                                menu.className = 'methodsDiv';
+                                menu.style.position = 'fixed';
+                                menu.style.left = `${event.clientX}px`;
+                                menu.style.top = `${event.clientY}px`;
+                                menu.style.zIndex = 10000;
+
+                                // Delete link option
+                                // Delete edge button
+                                const deleteBtn = document.createElement('button');
+                                deleteBtn.textContent = 'Delete this edge';
+                                deleteBtn.onclick = () => {
+                                    // Remove the edge from the edges array
+                                    const idx = edges.indexOf(d);
+                                    if (idx !== -1) {
+                                        edges.splice(idx, 1);
+                                        edgesRaw.splice(idx, 1);
+                                    }
+                                    // Remove from raw edges as well if needed
+                                    const rawIdx = edgesRaw.indexOf(d);
+                                    if (rawIdx !== -1) {
+                                        edgesRaw.splice(rawIdx, 1);
+                                    }
+                                    // Remove the link visually
+                                    d3.select(this).remove();
+                                    // Remove edge label if present
+                                    if (edgeLabel) {
+                                        edgeLabel.filter(e => e === d).remove();
+                                    }
+                                    d3.select(svgElement)
+                                        .selectAll('.link2')
+                                        .filter(e => e === d)
+                                        .remove();
+                                    // Remove context menu
+                                    menu.remove();
+                                };
+                                menu.appendChild(deleteBtn);
+
+                                // Change edge weight button
+                                const changeWeightBtn = document.createElement('button');
+                                changeWeightBtn.textContent = 'Change edge weight';
+                                changeWeightBtn.onclick = () => {
+                                    let newWeight = parseFloat(prompt('Enter new weight for this edge:', d.weight));
+                                    if (newWeight !== null) {
+                                        if (typeof newWeight !== 'number' || isNaN(newWeight)) {
+                                            menu.remove();
+                                            alert('Weight must be a valid number.');
+                                            return;
+                                        }
+                                        d.weight = newWeight;
+                                        // Update edgeLabel if present
+                                        if (edgeLabel) {
+                                            edgeLabel
+                                                .filter(e => e === d)
+                                                .text(newWeight);
+                                        }
+                                        // Also update in edgesRaw if possible
+                                        const raw = edgesRaw.find(e =>
+                                            e.source === (d.source.id || d.source) &&
+                                            e.target === (d.target.id || d.target)
+                                        );
+                                        if (raw) raw.weight = newWeight;
+                                    }
+                                    menu.remove();
+                                };
+                                menu.appendChild(changeWeightBtn);
+
+                                // Remove menu on click elsewhere
+                                function removeMenu(e) {
+                                    if (!menu.contains(e.target)) {
+                                        menu.remove();
+                                        document.removeEventListener('mousedown', removeMenu);
+                                    }
+                                }
+                                document.addEventListener('mousedown', removeMenu, { once: true });
+
+                                document.body.appendChild(menu);
+                            }),
+                        update => update,
+                        exit => exit.remove()
+                    );
+
+                // Re-bind data and redraw buffer links for edge hover/click
+                link2 = edgeBufferLayer.selectAll('.link2')
+                    .data(edges)
+                    .join(
+                        enter => enter.append('path')
+                            .attr('class', 'link2')
+                            .attr('fill', 'none')
+                            .attr('stroke', 'transparent')
+                            .attr('stroke-width', 20)
+                            .style('pointer-events', 'stroke')
+                            .on('mouseover', function (event, d) {
+                                const selector = `.link[source-id='${arrowId}${d.source.id}'][target-id='${arrowId}${d.target.id}']`;
+                                d3.select(selector).dispatch('mouseover');
+                            })
+                            .on('mouseout', function (event, d) {
+                                const selector = `.link[source-id='${arrowId}${d.source.id}'][target-id='${arrowId}${d.target.id}']`;
+                                d3.select(selector).dispatch('mouseout');
+                            })
+                            .on('contextmenu', function (event, d) {
+                                const selector = `.link[source-id='${arrowId}${d.source.id}'][target-id='${arrowId}${d.target.id}']`;
+                                d3.select(selector).node().dispatchEvent(new MouseEvent('contextmenu', {
+                                    bubbles: false,
+                                    cancelable: true,
+                                    clientX: event.clientX,
+                                    clientY: event.clientY,
+                                    view: window
+                                }));
+                            }),
+                        update => update,
+                        exit => exit.remove()
+                    );
+
+                // If weighted, update edge labels
+                if (weighted) {
+                    edgeLabel.exit().remove();
+                    edgeLabel = labelLayer.selectAll('.edge-label')
+                        .data(edges)
+                        .join(
+                            enter => enter.append('text')
+                                .attr('class', 'edge-label')
+                                .attr('font-size', 18)
+                                .attr('fill', edgeWeightColor)
+                                .text(d => d.weight)
+                                .style('pointer-events', 'none'),
+                            update => update.text(d => d.weight),
+                            exit => exit.remove()
+                        );
+                }
+
+                // Update positions
+                setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+                setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+
+                menu.remove();
+            }
+            menu.appendChild(newEdgeButton);
+
             // Remove menu on click elsewhere
             function removeMenu(e) {
                 if (!menu.contains(e.target)) {
@@ -1533,7 +1799,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         });
 
     // Add labels for nodes
-    const label = svg.selectAll('text')
+    const label = labelLayer.selectAll('text')
         .data(nodes)
         .enter()
         .append('text')
@@ -1548,7 +1814,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     // Add labels for edges (weights) if weighted
     let edgeLabel;
     if (weighted) {
-        edgeLabel = svg.selectAll('.edge-label')
+        edgeLabel = labelLayer.selectAll('.edge-label')
             .data(edges)
             .enter()
             .append('text')
@@ -1568,8 +1834,8 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
     // Update positions on simulation
     simulation.on('tick', () => {
-        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
-        setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId);
+        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+        setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
     });
 
     /* Auto-rearrange nodes functionality */
@@ -1579,8 +1845,8 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         node.attr('cx', d => d.x).attr('cy', d => d.y);
 
         // Update link positions
-        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
-        setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId);
+        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+        setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
         adjustViewBox(svg, nodes, grid);
         drawGrid(svg, grid);
 

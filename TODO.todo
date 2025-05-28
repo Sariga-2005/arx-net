@@ -1,4 +1,6 @@
 Graph algorithms are misbehaving
-Generate random graph functionality misbehaving
+Generate random graph functionality vertex and edge count clamp
+
+Scope for future releases:
 Self loops functionality
 Mutligraph functionality (Two edges between the same pair of vertices)

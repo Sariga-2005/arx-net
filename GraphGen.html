@@ -23,7 +23,7 @@
                 <input type='text' id='graphName' placeholder='Graph name (Can be left blank)'> <br>
                 <input type='text' id='edges' placeholder='E.g., AB5, 12-3.14, (B_C_-2.71)' autocomplete='off'
                     spellcheck='false'
-                    value='AB7, BA9, AC5, AD3, BC4, BE6, CD2, CF8, DE5, DG7, EF3, EH4, FG6, FI7, GH2, HI5, HJ9, IJ4'>
+                    value='AB7, BA9, AC5, AD3, BC4, BE6, CD2, CF8, DE5, DG7, EF3, EH4, FG6, FI7, GH2, HI5, HJ9, IJ4' style="text-transform: uppercase;">
                 <br>
                 <input type='checkbox' id='directed' checked>Directed
                 <input type='checkbox' id='weighted' checked>Weighted
@@ -31,10 +31,14 @@
                 <button id='generateGraph' onclick='addGraph()'>Generate Graph</button>
                 <div class = 'randomIP'>
                     Vertex count: &nbsp;
-                    <input type="text" id="numNodes" placeholder="Number of vertices" value="10"> &ensp;
+                    <input type="text" id="numNodes" placeholder="Number of vertices" value="10" onchange="updateMinMax()"> &ensp;
                     Edge count: &nbsp;
                     <input type="text" id="numEdges" placeholder="Number of edges" value="20">
                 </div>
+                <p id = 'minMaxRec'>
+                    <!-- Minimum recommended edge count</span> for vertex count: <b id = 'minRec' style = 'color: #ffc66d;'> 9 </b> <br> -->
+                    Max edge count for current vertex count: <b id = 'maxRec' style = 'color: #ffc66d;'> 45 </b>
+                </p>
                 <button id='generateRandomGraph'>Generate random Graph</button>
             </div>
             <div id='graphList' class='graphList'></div>
