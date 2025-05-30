@@ -119,15 +119,54 @@ clearAll.addEventListener('click', () => {
     }
 })
 
-function updateMinMax(){
+const selfLoops = document.getElementById('selfLoops')
+const duplicateEdges = document.getElementById('duplicateEdges')
+const isDirected = document.getElementById('directed')
+const connected = document.getElementById('connectedGraph')
+const maxWeight = document.getElementById('maxWeight')
+
+function updateMinMax() {
     const updatedValue = parseInt(document.getElementById("numNodes").value);
-    // Check if updatedValue is an integer
-    if (!Number.isInteger(Number(updatedValue))) {
+    const maxRecEl = document.getElementById("maxRec");
+
+    if (!Number.isInteger(updatedValue)) {
         alert("Please enter a valid integer for the number of nodes.");
         document.getElementById("numNodes").value = "";
         return;
     }
-    // Update DOM for minVal and maxVal
-    // document.getElementById("minRec").innerHTML = updatedValue - 1;
-    document.getElementById("maxRec").innerHTML = (updatedValue)*(updatedValue - 1)/2;
+
+    const n = updatedValue;
+
+    if (duplicateEdges.checked) {
+        // If duplicate edges are allowed, there's no upper bound
+        maxRecEl.innerHTML = '∞';
+    } else {
+        let maxEdges;
+        if (isDirected.checked) {
+            if (selfLoops.checked) {
+                maxEdges = n * n; // directed with self-loops
+            } else {
+                maxEdges = n * (n - 1); // directed without self-loops
+            }
+        } else {
+            if (selfLoops.checked) {
+                maxEdges = n * (n - 1) / 2 + n; // undirected with self-loops
+            } else {
+                maxEdges = n * (n - 1) / 2; // undirected without self-loops
+            }
+        }
+        maxRecEl.innerHTML = maxEdges;
+    }
 }
+
+const cgm = document.getElementById('createGraphMenu')
+const graphGenMenu = document.getElementById('sourceInput')
+cgm.addEventListener('click', function () {
+    if (this.getElementsByTagName('img')[0].src.endsWith('sidebaropen.png')) {
+        this.getElementsByTagName('img')[0].src = 'sidebarclose.png';
+        graphGenMenu.style.display = 'block';
+    } else {
+        this.getElementsByTagName('img')[0].src = 'sidebaropen.png';
+        graphGenMenu.style.display = 'none';
+    }
+})

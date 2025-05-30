@@ -133,13 +133,13 @@ function setContainerPosition(e, container) {
     }, { once: true });
 }
 
-function parseEdges(edgesInput) {
+function parseEdges(edgesInput, directed = true) {
     let edgesRaw = edgesInput.split(',').map(edge => {
         edge = edge.trim();
 
         // Validate the edge format
-        const simpleFormat = /^([a-zA-Z0-9]{2})(\d+)$/; // Matches 'ab5'
-        const parenFormat = /^\(([a-zA-Z0-9]+)_([a-zA-Z0-9]+)_(\d+)\)$/; // Matches '(a_b_5)'
+        const simpleFormat = /^([a-zA-Z0-9]{2})(\d*)$/; // Matches 'ab5'
+        const parenFormat = /^\(([a-zA-Z0-9]+)_([a-zA-Z0-9]+)(?:_(\d+))?\)$/; // Matches '(a_b_5)' and '(a_b)'
 
         let source, target, weight;
 
@@ -153,18 +153,40 @@ function parseEdges(edgesInput) {
             source = match[1];
             target = match[2];
             weight = parseFloat(match[3]);
+        } else if (edge.length === 1) {
+            source = edge;
+            target = null;
+            weight = null;
         } else {
             alert("Invalid edge format: " + edge);
             return null;
         }
 
         if (isNaN(weight)) {
-            alert(`Invalid weight in edge: ${edge}`);
-            return null;
+            weight = 1;
         }
 
         return { source, target, weight };
     }).filter(edge => edge !== null);
+
+    // Remove duplicate edges, keeping only the last occurrence. Can be removed for multigraph functionality
+    const edgeMap = new Map();
+    for (const edge of edgesRaw) {
+        if (edge.source && edge.target) {
+            const key = `${edge.source}_${edge.target}`;
+            edgeMap.set(key, edge); // Overwrites previous, so last stays
+            // If not directed, also remove the reverse edge
+            if (!directed) {
+                const reverseKey = `${edge.target}_${edge.source}`;
+                if (edgeMap.has(reverseKey)) {
+                    edgeMap.delete(reverseKey);
+                }
+            }
+        }
+    }
+    edgesRaw = Array.from(edgeMap.values());
+    // Disabling multigraph functionality for now. Comment out the above lines to enable it.
+
     return edgesRaw;
 }
 
@@ -176,16 +198,17 @@ function stringifyEdges(edgesRaw) {
 
 const graphInputField = document.getElementById('edges');
 
-// Rework
+// This function currently supports generating multigraphs as well, but that functionality has been disabled. Rework
 function generateRandomGraphString(vertexCount, edgeCount, options = {}) {
     const {
-        allowDuplicates = true,
-        ensureConnected = false, // if false, allows disconnected graphs
-        minWeight = 1,
-        maxWeight = 20
+        allowDuplicates = duplicateEdges.checked,
+        ensureConnected = connected.checked,
+        allowSelfLoops = selfLoops.checked,
+        minWeightValue = parseInt(minWeight.value),
+        maxWeightValue = parseInt(maxWeight.value),
+        isDirectedValue = isDirected.checked
     } = options;
 
-    // Helper to generate labels: a, b, ..., z, aa, ab, ...
     function indexToLabel(index) {
         let label = '';
         while (index >= 0) {
@@ -195,21 +218,52 @@ function generateRandomGraphString(vertexCount, edgeCount, options = {}) {
         return label;
     }
 
-    if (vertexCount <= 0) return '';
-    if (!allowDuplicates && edgeCount > vertexCount * (vertexCount - 1)) {
-        throw new Error("Too many edges for simple graph without duplicates.");
+    if (vertexCount <= 0) {
+        alert("Vertex count must be greater than 0.");
+        graphInputField.value = "";
+        return;
     }
 
-    const vertices = [];
-    for (let i = 0; i < vertexCount; i++) {
-        vertices.push(indexToLabel(i));
+    let maxEdgesWithoutDuplicates = 0;
+    if (allowSelfLoops) {
+        if (isDirectedValue) {
+            maxEdgesWithoutDuplicates = vertexCount * vertexCount; // Directed with self-loops
+        } else {
+            maxEdgesWithoutDuplicates = vertexCount * (vertexCount - 1) / 2 + vertexCount; // Undirected with self-loops
+        }
+    } else {
+        if (isDirectedValue) {
+            maxEdgesWithoutDuplicates = vertexCount * (vertexCount - 1); // Directed without self-loops
+        } else {
+            maxEdgesWithoutDuplicates = vertexCount * (vertexCount - 1) / 2; // Undirected without self-loops
+        }
     }
 
+    const minEdgesToConnect = vertexCount - 1;
+
+    // Adjust edge count
+    if (edgeCount < minEdgesToConnect) {
+        if (ensureConnected) {
+            alert(`To ensure connectivity, at least ${minEdgesToConnect} edges are needed. Using minimum required.`);
+        } else {
+            alert(`Edge count must be at least " ${minEdgesToConnect}.`);
+        }
+        edgeCount = minEdgesToConnect;
+    }
+
+    if (!allowDuplicates && edgeCount > maxEdgesWithoutDuplicates) {
+        alert(`Too many edges for a simple graph (no duplicates${allowSelfLoops ? '' : ', no self-loops'}). Using max allowed.`);
+        edgeCount = maxEdgesWithoutDuplicates;
+    }
+
+    const vertices = Array.from({ length: vertexCount }, (_, i) => indexToLabel(i));
     const edges = new Set();
     const edgeList = [];
 
-    // Step 1: Create a spanning tree if ensureConnected is true
-    if (ensureConnected && vertexCount > 1 && edgeCount >= vertexCount - 1) {
+    const usedVertices = new Set();
+
+    // Step 1: Build spanning tree if needed
+    if (ensureConnected && vertexCount > 1) {
         const shuffled = [...vertices];
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -219,29 +273,63 @@ function generateRandomGraphString(vertexCount, edgeCount, options = {}) {
         for (let i = 1; i < shuffled.length; i++) {
             const u = shuffled[i - 1];
             const v = shuffled[i];
-            const weight = Math.floor(Math.random() * (maxWeight - minWeight + 1)) + minWeight;
+            const weight = Math.floor(Math.random() * (maxWeightValue - minWeightValue + 1)) + minWeightValue;
             const key = `${u}_${v}`;
             edges.add(key);
             edgeList.push({ source: u, target: v, weight });
+            usedVertices.add(u);
+            usedVertices.add(v);
         }
     }
 
-    // Step 2: Add remaining edges (with or without duplicates)
-    while (edgeList.length < edgeCount) {
+    // Step 2: Add additional edges, but with a loop cap
+    let attempts = 0;
+    const maxAttempts = edgeCount * 10;
+
+    while (edgeList.length < edgeCount && attempts < maxAttempts) {
+        attempts++;
+
         const u = vertices[Math.floor(Math.random() * vertexCount)];
         const v = vertices[Math.floor(Math.random() * vertexCount)];
-        if (u === v) continue; // no self-loops
+        if (!allowSelfLoops && u === v) continue;
 
         const key = `${u}_${v}`;
-        if (!allowDuplicates && edges.has(key)) continue;
+        const reverseKey = `${v}_${u}`;
 
-        const weight = Math.floor(Math.random() * (maxWeight - minWeight + 1)) + minWeight;
+        if (!allowDuplicates) {
+            if (isDirectedValue) {
+                if (edges.has(key)) continue;
+            } else {
+                if (edges.has(key) || edges.has(reverseKey)) continue;
+            }
+            edges.add(key);
+        }
+
+
+        const weight = Math.floor(Math.random() * (maxWeightValue - minWeightValue + 1)) + minWeightValue;
+
+        if (!allowDuplicates) edges.add(key);
+        edgeList.push({ source: u, target: v, weight });
+        usedVertices.add(u);
+        usedVertices.add(v);
+    }
+
+    // Step 3: Add isolated vertices if disconnected and not all are present
+    const unused = vertices.filter(v => !usedVertices.has(v));
+    for (const u of unused) {
+        const v = vertices.find(x => x !== u);
+        if (!v) break;
+        const weight = Math.floor(Math.random() * (maxWeightValue - minWeightValue + 1)) + minWeightValue;
+        const key = `${u}_${v}`;
+        if (!allowDuplicates && edges.has(key)) continue;
         if (!allowDuplicates) edges.add(key);
         edgeList.push({ source: u, target: v, weight });
     }
 
-    graphInputField.value = stringifyEdges(edgeList); // uses previously defined function
+    graphInputField.value = stringifyEdges(edgeList);
+    addGraph(stringifyEdges(edgeList));
 }
+
 
 const generateRandomButton = document.getElementById('generateRandomGraph')
 generateRandomButton.addEventListener('click', () => {
@@ -334,26 +422,44 @@ function adjustViewBox(svg, nodes, grid) { // Takes grid as a parameter to redra
 function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer) {
     link.attr('d', d => {
         // Arc bidirectional edges
-        if (d.bidirectional) {
-            const dx = d.target.x - d.source.x;
-            const dy = d.target.y - d.source.y;
-            const dr = Math.sqrt(dx * dx + dy * dy) * 1.2; // Arc radius
-            return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
-        }
+        console.log(d);
+        console.log(d.bidirectional)
+        console.log(d.selfLoop)
+        if (d.selfLoop) {
+            const x = d.source.x;
+            const y = d.source.y;
+            const loopRadius = 30; // You can tweak this
+            const offsetX = 0; // Offset to make the loop visible
+            const offsetY = -25; // No vertical offset for the loop
+
+            // Draw a loop using an elliptical arc command, offset slightly so it's visible
+            // Draw a visible self-loop as an elliptical arc
+            return `M${x + offsetX},${y + offsetY - loopRadius}
+                a${loopRadius},${loopRadius} 0 1,1 0,${2 * loopRadius}
+                a${loopRadius},${loopRadius} 0 1,1 0,${-2 * loopRadius}`;
+
+        } else
+            if (d.bidirectional) {
+                const dx = d.target.x - d.source.x;
+                const dy = d.target.y - d.source.y;
+                const dr = Math.sqrt(dx * dx + dy * dy) * 1.2; // Arc radius
+                return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+            }
         return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
     });
 
-    if (directed) {
-        if (link.attr('class') === 'link') {
-            link.each(function (d) {
-                const path = d3.select(this);
-                const dx = d.target.x - d.source.x;
-                const dy = d.target.y - d.source.y;
-                const length = Math.sqrt(dx * dx + dy * dy); // Arc radius
+    // if (directed) {
+    if (link.attr('class') === 'link') {
+        link.each(function (d) {
+            const path = d3.select(this);
+            const dx = d.target.x - d.source.x;
+            const dy = d.target.y - d.source.y;
+            const length = Math.sqrt(dx * dx + dy * dy); // Arc radius
 
-                // Create a unique marker ID for each arrow
-                const uniqueArrowId = `${arrowId}-${d.source.id}-${d.target.id}`;
+            // Create a unique marker ID for each arrow
+            const uniqueArrowId = `${arrowId}-${d.source.id}-${d.target.id}`;
 
+            if (directed) {
                 // Append a unique marker for this edge if it doesn't already exist
                 if (!svg.select(`#${uniqueArrowId}`).node()) {
                     svg.append('defs')
@@ -372,19 +478,28 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
 
                 // Update the marker-end attribute of the path to use the unique marker to match the curve of bidirectional edge
                 path.attr('marker-end', `url(#${uniqueArrowId})`);
+            }
 
-                // Update the orient attribute of the unique marker
-                if (d.bidirectional) {
-                    // Calculate the tangent angle at the end of the arc - used to rotate directed markers based on the edge curving
-                    const angle = Math.atan2(dy, dx) + Math.PI / (smoothFunction(length));
-                    svg.select(`#${uniqueArrowId}`)
-                        .attr('orient', angle * (180 / Math.PI)); // Convert radians to degrees
-                } else {
-                    svg.select(`#${uniqueArrowId}`)
-                        .attr('orient', 'auto');
-                }
-            });
-        }
+            // Update the orient attribute of the unique marker
+            if (d.selfLoop) {
+                const angle = Math.atan2(dy, dx) + Math.PI / (smoothFunction(length));
+                // For self-loops, we can set a fixed orientation
+                svg.select(`#${uniqueArrowId}`)
+                    .attr('orient', 0) // Convert radians to degrees
+                    .attr('refX', 4)
+                    .attr('refY', -0.5);
+            }
+            else if (d.bidirectional) {
+                // Calculate the tangent angle at the end of the arc - used to rotate directed markers based on the edge curving
+                const angle = Math.atan2(dy, dx) + Math.PI / (smoothFunction(length));
+                svg.select(`#${uniqueArrowId}`)
+                    .attr('orient', angle * (180 / Math.PI)); // Convert radians to degrees
+            } else {
+                svg.select(`#${uniqueArrowId}`)
+                    .attr('orient', 'auto');
+            }
+        });
+        // }
 
         // Add weights if weighted
         if (weighted) {
@@ -395,8 +510,11 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
                     const dy = d.target.y - d.source.y;
                     const length = Math.sqrt(dx * dx + dy * dy);
                     const angle = Math.atan2(dy, dx);
-                    if (d.bidirectional === true) {
-                        console.log(d.source.id, d.target.id, d.bidirectional)
+                    if (d.selfLoop === true) {
+                        const offsetX = -5;
+                        return midpointX + offsetX;
+                    }
+                    else if (d.bidirectional === true) {
                         const offsetX = Math.sin(angle) * length / 10;
                         return midpointX + offsetX;
                     }
@@ -408,7 +526,11 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
                     const dy = d.target.y - d.source.y;
                     const length = Math.sqrt(dx * dx + dy * dy);
                     const angle = Math.atan2(dy, dx);
-                    if (d.bidirectional === true) {
+                    if (d.selfLoop === true) {
+                        const offsetY = -27;
+                        return midpointY + offsetY;
+                    }
+                    else if (d.bidirectional === true) {
                         const offsetY = -Math.cos(angle) * length / 10;
                         return midpointY + offsetY;
                     }
@@ -493,7 +615,6 @@ function dragEnded(event, d, simulation, useForce, thisNode) {
 // Supporting function that will be used to rotate arrows based on edge direction
 function smoothFunction(x, k = 0.02, c = 275) {
     const exponent = -k * (x - c);
-    console.log("x ",x,"  ","exp ",exponent)
     const denominator = 1 + Math.exp(exponent);
     const result = 10 - (2.4 / denominator);
     return result;
@@ -608,8 +729,8 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     headerSpan.appendChild(rearrangeMethods);
 
     // Input Validation - Parse edges
-    edges = parseEdges(edgesInput);
-    edgesRaw = parseEdges(edgesInput);
+    edges = parseEdges(edgesInput, directed);
+    edgesRaw = parseEdges(edgesInput, directed);
     if (edges.length === 0) {
         return;
     }
@@ -1218,22 +1339,37 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     }
 
     // Attach zoom to mousewheel
+    // Mouse wheel zoom
     container.addEventListener('wheel', event => {
         event.preventDefault();
-        event.deltaY < 0 ? zoomIn() : zoomOut();
+
+        // Support pinch-to-zoom (ctrlKey usually held during pinch on trackpads)
+        const isPinchZoom = event.ctrlKey;
+
+        if (event.deltaY < 0) {
+            zoomIn(isPinchZoom);
+        } else {
+            zoomOut(isPinchZoom);
+        }
     });
+
+
     /* End of zoom functionality */
 
-    /* Pan functionality to middle mouse hold and drag */
+    /* Pan functionality to middle mouse hold or Ctrl + LMB and drag */
     let isPanning = false;
     let startX, startY;
 
     svg.on('mousedown', (event) => {
-        if (event.button !== 1) return; // Middle mouse button
+        if (!(event.button === 1 || (event.button === 0 && event.ctrlKey))) return;
+
         isPanning = true;
         startX = event.clientX;
         startY = event.clientY;
         document.body.style.cursor = 'grabbing';
+
+        // Prevent default to avoid unwanted text selection or browser drag behavior
+        event.preventDefault();
     });
 
     svg.on('mousemove', (event) => {
@@ -1242,7 +1378,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         let viewBox = svg.attr('viewBox').split(' ').map(Number);
         let [minX, minY, viewWidth, viewHeight] = viewBox;
 
-        let dx = (startX - event.clientX) * (viewWidth / 600); // Scale movement
+        let dx = (startX - event.clientX) * (viewWidth / 600); // Adjust the scale as needed
         let dy = (startY - event.clientY) * (viewHeight / 400);
 
         svg.attr('viewBox', `${minX + dx} ${minY + dy} ${viewWidth} ${viewHeight}`);
@@ -1256,6 +1392,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         document.body.style.cursor = 'default';
     });
     /* End of pan functionality */
+
 
     svg.on('dblclick', () => adjustViewBox(svg, nodes, grid)); // Bind to double click to adjust viewbox
     /* End of SVG general functionalities */
@@ -1282,7 +1419,12 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     const edgeMap = new Set(edges.map(e => `${e.source}-${e.target}`));
     edges.forEach(edge => {
         if (edgeMap.has(`${edge.target}-${edge.source}`)) {
-            edge.bidirectional = true;
+            if (directed) { // Undirected graphs cannot have bidirectional edges
+                edge.bidirectional = true;
+            }
+        }
+        if (edge.source === edge.target) {
+            edge.selfLoop = true; // Mark self-loops
         }
     });
 
@@ -1584,7 +1726,10 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
                 }
                 // Check if the reverse edge exists (i.e., bidirectional)
                 const reverseEdge = edges.find(e => e.source === targetNode && e.target === d);
-                if (reverseEdge) {
+                const isSelfLoop = edges.find(e => e.source === e.target)
+                if (isSelfLoop) {
+                    edges.push({ source: d, target: targetNode, weight, selfLoop: true })
+                } else if (reverseEdge) {
                     // Mark both edges as bidirectional
                     edges.push({ source: d, target: targetNode, weight, bidirectional: true });
                     reverseEdge.bidirectional = true;

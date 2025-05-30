@@ -38,6 +38,7 @@ p {
 table {
     margin-top: 5px;
 }
+
 /* Typography */
 h1,
 h3 {
@@ -50,14 +51,16 @@ h3 {
     color: #fff;
     outline: none;
 }
-margin-top
+
 /* Buttons */
 button {
-    font-size: 10px;
     outline: none;
 }
 
-#generateGraph, #generateRandomGraph { /* Generate Graph Button */
+#generateGraph,
+#generateRandomGraph {
+    /* Generate Graph Button */
+    font-size:medium;
     outline: none;
     background-color: #ffc66d;
     border: 1.5px solid transparent;
@@ -66,7 +69,6 @@ button {
     padding: 5px 10px;
     margin-top: 20px;
     margin-bottom: 10px;
-    font-size: 16px;
     border-radius: 3px;
     transition: background-color 0.3s, color 0.3s, border 0.3s;
 }
@@ -75,28 +77,31 @@ button {
     margin-top: 5px;
 }
 
-#generateGraph:hover, #generateRandomGraph:hover {
+#generateGraph:hover,
+#generateRandomGraph:hover {
     cursor: pointer;
     background-color: transparent;
     border: 1.5px solid #ffc66d;
     color: #ffc66d;
 }
 
-.randomIP {
-    display: block;
-    width: calc(100% - 20px);
-    justify-content: space-between;
+#numNodes,
+#numEdges,
+#minWeight,
+#maxWeight {
+    width: 15%;
+    margin-right: 10px;
 }
 
-#numNodes, #numEdges {
-    display: inline-block;
-    width: 18%;
-    margin: none;
-    padding: 10px;
-    background: none;
-    border: 1.5px solid #ffc66d;
-    color: #fff;
-    outline: none;
+.input-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.input-row label {
+    margin-right: 5px;
+    width: 30%;
 }
 
 .showHideDeleteDiv button,
@@ -113,7 +118,6 @@ h1 button {
     width: 32px;
     height: 32px;
     text-align: center;
-    /* padding: 3px 10px; */
     text-align: left;
     margin: 0;
     vertical-align: middle;
@@ -160,7 +164,6 @@ input[type="text"] {
     padding: 10px;
     background: none;
     border: 1.5px solid #ffc66d;
-    font-size: 14px;
     color: #fff;
     outline: none;
 }
@@ -214,17 +217,19 @@ input[type="checkbox"]:checked::before {
 }
 
 .graphGenerator {
+    height: fit-content;
     margin-left: 20px;
     margin-bottom: 20px;
+    overflow: clip;
 }
 
 /* Outliner */
 .outliner {
     display: block;
-    height: 100%;
+    max-height: 190px;
     color: #fff;
     padding: 0px 20px 20px 20px;
-    overflow: auto;
+    overflow-y: scroll;
 }
 
 /* Scrollbar */
@@ -235,11 +240,13 @@ input[type="checkbox"]:checked::before {
 ::-webkit-scrollbar-track {
     background: #141414;
 }
+
 ::-webkit-scrollbar-thumb {
     background-color: #3f3f3f;
     border-radius: 10px;
     border: 2px solid #1d1d1d;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background-color: #555;
 }
@@ -292,7 +299,7 @@ input[type="checkbox"]:checked::before {
     width: 100%;
     height: auto;
     text-align: left;
-    padding: 3px 10px 3px 15px;
+    padding: 3px 10px 3px 8px;
     background-color: #1d1d1d;
     color: #fff;
     border-radius: 3px;
@@ -308,6 +315,13 @@ input[type="checkbox"]:checked::before {
     display: inline-block;
 }
 
-.allGraphControls button:hover, .showHideDeleteDiv button:hover, #about:hover {
+#createGraphMenu {
+    display: inline-flex;
+    align-items: center;
+    font-size: 40px;
+}
+.allGraphControls button:hover,
+.showHideDeleteDiv button:hover,
+h1 button:hover {
     background-color: #424242;
 }

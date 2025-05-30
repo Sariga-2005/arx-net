@@ -311,7 +311,7 @@ function mst(edges) {
         if (!graph[source]) graph[source] = [];
         if (!graph[target]) graph[target] = [];
         graph[source].push({ target, weight });
-        graph[target].push({ target: source, weight }); // undirected
+        graph[target].push({ source, weight }); // undirected
     }
 
     const mstEdges = [];
