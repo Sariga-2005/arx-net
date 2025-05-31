@@ -713,7 +713,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     const rearrangeNodes = document.createElement('button');
     rearrangeNodes.title = 'Rearrange vertices spaced evenly in a circle';
     const rearrangeNodesImg = document.createElement('img');
-    rearrangeNodesImg.src = 'rearrange.png';
+    rearrangeNodesImg.src = 'images/rearrange.png';
     rearrangeNodes.appendChild(rearrangeNodesImg);
     rearrangeMethods.appendChild(rearrangeNodes);
 
@@ -1574,11 +1574,11 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     showHideGraph.title = 'Show/hide graph';
     showHideGraph.className = 'showHideCurrentGraph';
     const showHideImg = document.createElement('img');
-    showHideImg.src = 'show.png';
+    showHideImg.src = 'images/show.png';
     showHideGraph.appendChild(showHideImg);
     showHideGraph.addEventListener('click', function () {
         container.style.display === 'none' ? container.style.display = 'block' : container.style.display = 'none';
-        showHideImg.src = container.style.display === 'none' ? 'hide.png' : 'show.png';
+        showHideImg.src = container.style.display === 'none' ? 'images/hide.png' : 'images/show.png';
         if (document.fullscreenElement) {
             document.exitFullscreen();
         }
@@ -1591,7 +1591,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     const focusButton = document.createElement('button');
     focusButton.title = 'Focus on this graph';
     const focusImg = document.createElement('img');
-    focusImg.src = 'focus.png';
+    focusImg.src = 'images/focus.png';
     focusButton.appendChild(focusImg);
     focusButton.addEventListener('click', () => {
         if (container.style.display === 'none') showHideGraph.click();
