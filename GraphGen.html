@@ -15,17 +15,19 @@
 
 <body>
     <div class='container'>
-        <div class='graphGenerator' id = 'graphGenerator'>
+        <div class='graphGenerator' id='graphGenerator'>
             <h1 id='instructions'>Arx Net
                 <button id='about' title='About this application'><img src='about.png'></button>
-                <button id='createGraphMenu' title='Show/hide create graph menu'><img src = 'sidebarclose.png'></button>
+                <button id='createGraphMenu' title='Show/hide create graph menu'><img src='sidebarclose.png'></button>
             </h1>
-            <div class='sourceInput' id = 'sourceInput'>
+            <div class='sourceInput' id='sourceInput'>
                 <input type='text' id='graphName' placeholder='Graph name (Can be left blank)'> <br>
-                <input type='text' id='edges' placeholder='E.g., AB5, 12-3.14, (B_C_-2.71)' autocomplete='off'
+                <input type='text' id='vertices'
+                    placeholder='E.G., A, B, C'
+                    style="text-transform: uppercase;"> <br>
+                <input type='text' id='edges' placeholder='E.G., AB5, 12-3.14, (B_C_-2.71)' autocomplete='off'
                     spellcheck='false'
                     value='AB7, AA6, BA9, AC5, AD3, BC4, BE6, CD2, CF8, DE5, DG7, EE2, EF3, EH4, FG6, FI7, GH2, HI5, HJ9, IJ4'
-                    
                     style="text-transform: uppercase;">
                 <br>
                 <input type='checkbox' id='directed' onchange="updateMinMax()" checked>Directed <br>

@@ -165,8 +165,12 @@ cgm.addEventListener('click', function () {
     if (this.getElementsByTagName('img')[0].src.endsWith('sidebaropen.png')) {
         this.getElementsByTagName('img')[0].src = 'sidebarclose.png';
         graphGenMenu.style.display = 'block';
+        outliner.style.height = '15vh';
     } else {
         this.getElementsByTagName('img')[0].src = 'sidebaropen.png';
         graphGenMenu.style.display = 'none';
+        outliner.style.height = '85vh';
     }
 })
+
+const vertexInput = document.getElementById('vertices');

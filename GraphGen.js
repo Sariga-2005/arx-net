@@ -422,9 +422,6 @@ function adjustViewBox(svg, nodes, grid) { // Takes grid as a parameter to redra
 function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer) {
     link.attr('d', d => {
         // Arc bidirectional edges
-        console.log(d);
-        console.log(d.bidirectional)
-        console.log(d.selfLoop)
         if (d.selfLoop) {
             const x = d.source.x;
             const y = d.source.y;
@@ -620,7 +617,7 @@ function smoothFunction(x, k = 0.02, c = 275) {
     return result;
 }
 
-function addGraph(edgesInput = null, inputName = null) { // Core function will all functionalities
+function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core function will all functionalities
     // Common arrow head ID for this graph
     const arrowId = `arrowHead${graphCount}`; // Creating separate arrow heads for each graph, while also grouping the similar ones
     graphCount++;
@@ -930,8 +927,6 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
         function onMouseMove(event) {
             let newHeight = startHeight - (event.clientY - startY);
-            let newTop = startTop + (event.clientY - startY);
-
             const minHeight = container.offsetHeight * 0.2;
             const maxHeight = container.offsetHeight * 0.9;
             if (newHeight >= minHeight && newHeight <= maxHeight) { // Minimum height
@@ -1036,6 +1031,371 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         addMenuItem('Delete', 'Delete this graph', () => {
             deleteThisGraph.click()
         });
+
+        // Create new vertex
+        addMenuItem('Create new vertex', 'Add a new vertex to this graph', () => {
+            let newVertex = prompt("Enter new vertex name (e.g., A, B, C):");
+            if (newVertex) {
+                newVertex = newVertex.toUpperCase();
+                if (nodes.some(node => node.id === newVertex)) {
+                    alert(`Vertex ${newVertex} already exists.`);
+                } else {
+                    // Place the new node at the cursor
+                    // Calculate the SVG coordinates corresponding to the mouse position
+                    const pt = svg.node().createSVGPoint();
+                    pt.x = event.clientX;
+                    pt.y = event.clientY;
+                    const svgP = pt.matrixTransform(svg.node().getScreenCTM().inverse());
+                    const centerX = svgP.x;
+                    const centerY = svgP.y;
+                    nodes.push({ id: newVertex, x: centerX, y: centerY, vx: 0, vy: 0 });
+
+                    let nodeSelection = nodeLayer.selectAll('circle')
+                        .data(nodes, d => d.id);
+
+                    // 3. Handle new nodes with enter()
+                    let nodeEnter = nodeSelection.enter()
+                        .append('circle')
+                        .attr('r', 20)
+                        .attr('fill', nodeColor)
+                        .attr('cx', d => d.x)
+                        .attr('cy', d => d.y)
+                        .on('mouseover', function () {
+                            d3.select(this).attr('fill', hoverColor);
+                        })
+                        .on('mouseout', function () {
+                            d3.select(this).attr('fill', nodeColor);
+                        })
+                        .call(
+                            d3.drag()
+                                .on('start', function (event, d) {
+                                    dragStarted(event, d, simulation, this);
+                                })
+                                .on('drag', function (event, d) {
+                                    dragged(event, d, this);
+                                })
+                                .on('end', function (event, d) {
+                                    dragEnded(event, d, simulation, useForceCheckbox.checked, this);
+                                })
+                        )
+                        .on('contextmenu', function (event, d) {
+                            event.preventDefault();
+                            event.stopPropagation();
+
+                            // Create context menu
+                            const menu = document.createElement('div');
+                            menu.className = 'methodsDiv';
+                            menu.style.position = 'fixed';
+                            menu.style.left = `${event.clientX}px`;
+                            menu.style.top = `${event.clientY}px`;
+                            menu.style.zIndex = 10000;
+
+                            // Delete node option
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.textContent = 'Delete this vertex';
+                            deleteBtn.onclick = () => {
+                                // Remove the node from the nodes array
+                                const idx = nodes.indexOf(d);
+                                if (idx !== -1) {
+                                    nodes.splice(idx, 1);
+                                    edges = edges.filter(edge => edge.source !== d && edge.target !== d); // Remove edges connected to this node
+                                    edgesRaw = edgesRaw.filter(edge => edge.source !== d && edge.target !== d); // Remove from raw edges as well
+                                }
+                                // Remove the node visually
+                                d3.select(this).remove();
+                                // Remove labels associated with this node
+                                label.filter(l => l === d).remove();
+                                if (edgeLabel) {
+                                    edgeLabel.filter(e => e.source === d || e.target === d).remove();
+                                }
+                                // Remove edges that go to and from this node
+                                link.filter(l => l.source === d || l.target === d).remove();
+                                // Update edges and edgesRaw
+                                edges = edges.filter(edge => edge.source.id !== d.id && edge.target.id !== d.id);
+                                edgesRaw = edgesRaw.filter(edge => edge.source !== d.id && edge.target !== d.id);
+                                // Remove context menu
+                                menu.remove();
+                            };
+                            menu.appendChild(deleteBtn);
+
+                            // Create new edge
+                            const newEdgeButton = document.createElement('button');
+                            newEdgeButton.textContent = 'Create new edge from this vertex';
+                            newEdgeButton.onclick = () => {
+                                let targetId = prompt("Enter target vertex id:").toUpperCase();
+                                if (!targetId) {
+                                    menu.remove();
+                                    return;
+                                }
+                                const targetNode = nodes.find(n => n.id === targetId);
+                                if (!targetNode) {
+                                    menu.remove();
+                                    alert("Target vertex does not exist.");
+                                    return;
+                                }
+                                let weight = 1;
+                                if (weighted) {
+                                    let w = prompt("Enter weight for this edge:", "1");
+                                    if (w === null) {
+                                        menu.remove();
+                                        return;
+                                    }
+                                    weight = parseFloat(w);
+                                    if (isNaN(weight)) {
+                                        alert("Invalid weight.");
+                                        menu.remove();
+                                        return;
+                                    }
+                                }
+                                // Check if the reverse edge exists (i.e., bidirectional)
+                                const reverseEdge = edges.find(e => e.source === targetNode && e.target === d);
+                                const isSelfLoop = d.id === targetId;
+                                if (isSelfLoop) {
+                                    edges.push({ source: d, target: targetNode, weight, selfLoop: true })
+                                } else if (reverseEdge) {
+                                    // Mark both edges as bidirectional
+                                    edges.push({ source: d, target: targetNode, weight, bidirectional: true });
+                                    reverseEdge.bidirectional = true;
+                                } else {
+                                    edges.push({ source: d, target: targetNode, weight });
+                                }
+
+                                edgesRaw.push({ source: d.id, target: targetNode.id, weight });
+                                // Re-bind data and redraw links and edge labels
+                                link = edgeLayer.selectAll('.link')
+                                    .data(edges)
+                                    .join(
+                                        enter => enter.append('path')
+                                            .attr('class', 'link')
+                                            .attr('source-id', d => `${arrowId}${d.source.id}`)
+                                            .attr('target-id', d => `${arrowId}${d.target.id}`)
+                                            .attr('fill', 'none')
+                                            .attr('stroke', edgeColor)
+                                            .attr('stroke-width', 1.5)
+                                            .on('mouseover', function () {
+                                                d3.select(this).attr('stroke', edgeColorHover);
+                                                // Also change color of the directed marker (arrowhead) if present
+                                                if (directed) {
+                                                    const markerUrl = d3.select(this).attr('marker-end');
+                                                    if (markerUrl) {
+                                                        // Extract marker id from url(#markerId)
+                                                        const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
+                                                        if (markerIdMatch) {
+                                                            const markerId = markerIdMatch[1];
+                                                            // Change the fill color of the marker's path
+                                                            d3.select(svgElement)
+                                                                .select(`#${markerId}`)
+                                                                .select('path')
+                                                                .attr('fill', edgeColorHover);
+                                                        }
+                                                    }
+                                                }
+                                            })
+                                            .on('mouseout', function () {
+                                                d3.select(this).attr('stroke', edgeColor);
+                                                // Also reset color of the directed marker (arrowhead) if present
+                                                if (directed) {
+                                                    const markerUrl = d3.select(this).attr('marker-end');
+                                                    if (markerUrl) {
+                                                        // Extract marker id from url(#markerId)
+                                                        const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
+                                                        if (markerIdMatch) {
+                                                            const markerId = markerIdMatch[1];
+                                                            // Reset the fill color of the marker's path
+                                                            d3.select(svgElement)
+                                                                .select(`#${markerId}`)
+                                                                .select('path')
+                                                                .attr('fill', edgeColor);
+                                                        }
+                                                    }
+                                                }
+                                            })
+                                            .on('contextmenu', function (event, d) {
+                                                event.preventDefault();
+                                                event.stopPropagation();
+
+                                                // Create context menu
+                                                const menu = document.createElement('div');
+                                                menu.className = 'methodsDiv';
+                                                menu.style.position = 'fixed';
+                                                menu.style.left = `${event.clientX}px`;
+                                                menu.style.top = `${event.clientY}px`;
+                                                menu.style.zIndex = 10000;
+
+                                                // Delete link option
+                                                // Delete edge button
+                                                const deleteBtn = document.createElement('button');
+                                                deleteBtn.textContent = 'Delete this edge';
+                                                deleteBtn.onclick = () => {
+                                                    // Remove the edge from the edges array
+                                                    const idx = edges.indexOf(d);
+                                                    if (idx !== -1) {
+                                                        edges.splice(idx, 1);
+                                                        edgesRaw.splice(idx, 1);
+                                                    }
+                                                    // Remove from raw edges as well if needed
+                                                    const rawIdx = edgesRaw.indexOf(d);
+                                                    if (rawIdx !== -1) {
+                                                        edgesRaw.splice(rawIdx, 1);
+                                                    }
+                                                    // Remove the link visually
+                                                    d3.select(this).remove();
+                                                    // Remove edge label if present
+                                                    if (edgeLabel) {
+                                                        edgeLabel.filter(e => e === d).remove();
+                                                    }
+                                                    d3.select(svgElement)
+                                                        .selectAll('.link2')
+                                                        .filter(e => e === d)
+                                                        .remove();
+                                                    // Remove context menu
+                                                    menu.remove();
+                                                };
+                                                menu.appendChild(deleteBtn);
+
+                                                // Change edge weight button
+                                                const changeWeightBtn = document.createElement('button');
+                                                changeWeightBtn.textContent = 'Change edge weight';
+                                                changeWeightBtn.onclick = () => {
+                                                    let newWeight = parseFloat(prompt('Enter new weight for this edge:', d.weight));
+                                                    if (newWeight !== null) {
+                                                        if (typeof newWeight !== 'number' || isNaN(newWeight)) {
+                                                            menu.remove();
+                                                            alert('Weight must be a valid number.');
+                                                            return;
+                                                        }
+                                                        d.weight = newWeight;
+                                                        // Update edgeLabel if present
+                                                        if (edgeLabel) {
+                                                            edgeLabel
+                                                                .filter(e => e === d)
+                                                                .text(newWeight);
+                                                        }
+                                                        // Also update in edgesRaw if possible
+                                                        const raw = edgesRaw.find(e =>
+                                                            e.source === (d.source.id || d.source) &&
+                                                            e.target === (d.target.id || d.target)
+                                                        );
+                                                        if (raw) raw.weight = newWeight;
+                                                    }
+                                                    menu.remove();
+                                                };
+                                                menu.appendChild(changeWeightBtn);
+
+                                                // Remove menu on click elsewhere
+                                                function removeMenu(e) {
+                                                    if (!menu.contains(e.target)) {
+                                                        menu.remove();
+                                                        document.removeEventListener('mousedown', removeMenu);
+                                                    }
+                                                }
+                                                document.addEventListener('mousedown', removeMenu, { once: true });
+
+                                                document.body.appendChild(menu);
+                                            }),
+                                        update => update,
+                                        exit => exit.remove()
+                                    );
+
+                                // Re-bind data and redraw buffer links for edge hover/click
+                                link2 = edgeBufferLayer.selectAll('.link2')
+                                    .data(edges)
+                                    .join(
+                                        enter => enter.append('path')
+                                            .attr('class', 'link2')
+                                            .attr('fill', 'none')
+                                            .attr('stroke', 'transparent')
+                                            .attr('stroke-width', 20)
+                                            .style('pointer-events', 'stroke')
+                                            .on('mouseover', function (event, d) {
+                                                const selector = `.link[source-id='${arrowId}${d.source.id}'][target-id='${arrowId}${d.target.id}']`;
+                                                d3.select(selector).dispatch('mouseover');
+                                            })
+                                            .on('mouseout', function (event, d) {
+                                                const selector = `.link[source-id='${arrowId}${d.source.id}'][target-id='${arrowId}${d.target.id}']`;
+                                                d3.select(selector).dispatch('mouseout');
+                                            })
+                                            .on('contextmenu', function (event, d) {
+                                                const selector = `.link[source-id='${arrowId}${d.source.id}'][target-id='${arrowId}${d.target.id}']`;
+                                                d3.select(selector).node().dispatchEvent(new MouseEvent('contextmenu', {
+                                                    bubbles: false,
+                                                    cancelable: true,
+                                                    clientX: event.clientX,
+                                                    clientY: event.clientY,
+                                                    view: window
+                                                }));
+                                            }),
+                                        update => update,
+                                        exit => exit.remove()
+                                    );
+
+                                // If weighted, update edge labels
+                                if (weighted) {
+                                    edgeLabel.exit().remove();
+                                    edgeLabel = labelLayer.selectAll('.edge-label')
+                                        .data(edges)
+                                        .join(
+                                            enter => enter.append('text')
+                                                .attr('class', 'edge-label')
+                                                .attr('font-size', 18)
+                                                .attr('fill', edgeWeightColor)
+                                                .text(d => d.weight)
+                                                .style('pointer-events', 'none'),
+                                            update => update.text(d => d.weight),
+                                            exit => exit.remove()
+                                        );
+                                }
+
+                                // Update positions
+                                setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+                                setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+
+                                menu.remove();
+                            }
+                            menu.appendChild(newEdgeButton);
+
+                            // Remove menu on click elsewhere
+                            function removeMenu(e) {
+                                if (!menu.contains(e.target)) {
+                                    menu.remove();
+                                    document.removeEventListener('mousedown', removeMenu);
+                                }
+                            }
+                            document.addEventListener('mousedown', removeMenu, { once: true });
+
+                            document.body.appendChild(menu);
+                        });
+
+                    // 4. Remove old nodes (optional, not always needed)
+                    nodeSelection.exit().remove();
+
+                    // 5. Merge new and existing nodes if needed later
+                    node = nodeEnter.merge(nodeSelection);
+
+                    // Update labels
+                    let labelSelection = labelLayer.selectAll('text')
+                        .data(nodes, d => d.id);
+
+                    // ENTER: Add new labels
+                    let labelEnter = labelSelection.enter()
+                        .append('text')
+                        .attr('dy', 3)
+                        .attr('text-anchor', 'middle')
+                        .text(d => d.id)
+                        .attr('font-size', 16)
+                        .attr('fill', nodeLabelColor)
+                        .style('pointer-events', 'none')
+                        .style('font-weight', 'bold');
+
+                    // EXIT: Remove labels for removed nodes (optional)
+                    // labelSelection.exit().remove();
+
+                    // MERGE: Combine enter and update selections
+                    label = labelEnter.merge(labelSelection);
+                    setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+                }
+            }
+        })
 
         // Remove menu on click elsewhere
         document.addEventListener('mousedown', function handler(e) {
@@ -1249,7 +1609,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
 
     duplicateGraph.addEventListener('click', () => {
         let edgesRawString = stringifyEdges(edgesRaw);
-        addGraph(edgesRawString, `${displayName} copy`);
+        addGraph(edgesRawString, nodes, `${displayName} copy`);
         graphOptions.style.display = "none";
     })
 
@@ -1429,9 +1789,21 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
     });
 
     // Create nodes from edges
-    const nodes = Array.from(
-        new Set(edges.flatMap(edge => [edge.source, edge.target]))
-    ).map(id => ({ id }));
+    if (nodes === null) {
+        nodes = Array.from(
+            new Set(edges.flatMap(edge => [edge.source, edge.target]))
+        ).map(id => ({ id }));
+
+        const vertexData = vertexInput.value.trim().toUpperCase();
+        const vertices = vertexData.split(',').map(v => v.trim()).filter(v => v !== "");
+
+        if (vertices.length > 0) {
+            let extraVertices = vertices.map(v => ({ id: v }));
+            const combined = [...nodes, ...extraVertices];
+            nodes = Array.from(new Map(combined.map(n => [n.id, n])).values());
+        }
+    }
+
     /* End of graph elements creation */
 
     /* Force simulation values */
@@ -1637,8 +2009,8 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         });
 
     // Draw nodes - Drawing nodes after links so that they appear in front
-    const node = nodeLayer.selectAll('circle')
-        .data(nodes)
+    let node = nodeLayer.selectAll('circle')
+        .data(nodes, d => d.id)
         .enter()
         .append('circle')
         .attr('r', 20)
@@ -1726,7 +2098,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
                 }
                 // Check if the reverse edge exists (i.e., bidirectional)
                 const reverseEdge = edges.find(e => e.source === targetNode && e.target === d);
-                const isSelfLoop = edges.find(e => e.source === e.target)
+                const isSelfLoop = d.id === targetId
                 if (isSelfLoop) {
                     edges.push({ source: d, target: targetNode, weight, selfLoop: true })
                 } else if (reverseEdge) {
@@ -1944,7 +2316,7 @@ function addGraph(edgesInput = null, inputName = null) { // Core function will a
         });
 
     // Add labels for nodes
-    const label = labelLayer.selectAll('text')
+    let label = labelLayer.selectAll('text')
         .data(nodes)
         .enter()
         .append('text')

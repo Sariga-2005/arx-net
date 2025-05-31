@@ -220,16 +220,18 @@ input[type="checkbox"]:checked::before {
     height: fit-content;
     margin-left: 20px;
     margin-bottom: 20px;
+    box-sizing: border-box;
     overflow: clip;
 }
 
 /* Outliner */
 .outliner {
     display: block;
-    max-height: 190px;
+    height: 15vh;
     color: #fff;
     padding: 0px 20px 20px 20px;
     overflow-y: scroll;
+    box-sizing: border-box;
 }
 
 /* Scrollbar */
