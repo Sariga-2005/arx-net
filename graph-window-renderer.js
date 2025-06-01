@@ -112,9 +112,15 @@ function snapPosition(x, y) {
 }
 
 // Dragging functionality for the container
-function setContainerPosition(e, container) {
+function setContainerPosition(e, container, fullScreenButton) {
     if (e.target.tagName.toLowerCase() === 'input' || e.target.closest('button')) return;
     e.preventDefault();
+
+    if (isFullScreen) {
+        fullScreenButton.click(); // Exit full screen if it is in full screen mode
+        container.style.top = (e.clientY - 10) + 'px'; // Offset top by 10px
+        container.style.left = (e.clientX - 0.8 * container.offsetWidth) + 'px'; // Offset left by 80% of container width
+    }
 
     let offsetX = e.clientX - container.offsetLeft;
     let offsetY = e.clientY - container.offsetTop;
@@ -413,6 +419,164 @@ function adjustViewBox(svg, nodes, grid) { // Takes grid as a parameter to redra
 }
 /* End of viewbox adjustment */
 
+function zoom(zoomFactor, svg, grid) {
+    let viewBox = svg.attr('viewBox').split(' ').map(Number);
+    let [minX, minY, viewWidth, viewHeight] = viewBox;
+
+    const newWidth = viewWidth * zoomFactor;
+    const newHeight = viewHeight * zoomFactor;
+    const offsetX = (viewWidth - newWidth) / 2;
+    const offsetY = (viewHeight - newHeight) / 2;
+
+    svg.attr('viewBox', `${minX + offsetX} ${minY + offsetY} ${newWidth} ${newHeight}`);
+    drawGrid(svg, grid); // Update grid size dynamically
+}
+
+function zoomIn(svg, grid) {
+    zoom(0.9, svg, grid); // 10% zoom-in
+}
+
+function zoomOut(svg, grid) {
+    zoom(1.1, svg, grid); // 10% zoom-out
+}
+
+/* SVG pan functionality */
+let isSvgPanning = false;
+let panStartX, panStartY;
+
+function svgPanStart(event) {
+    if (!(event.button === 1 || (event.button === 0 && event.ctrlKey))) return;
+
+    isSvgPanning = true;
+    panStartX = event.clientX;
+    panStartY = event.clientY;
+    document.body.style.cursor = 'grabbing';
+    event.preventDefault();
+}
+
+function svgPanMove(event, svg, drawGridFn, gridData) {
+    if (!isSvgPanning) return;
+
+    const [minX, minY, viewWidth, viewHeight] = svg.attr('viewBox').split(' ').map(Number);
+    const dx = (panStartX - event.clientX) * (viewWidth / 600);
+    const dy = (panStartY - event.clientY) * (viewHeight / 400);
+
+    svg.attr('viewBox', `${minX + dx} ${minY + dy} ${viewWidth} ${viewHeight}`);
+    panStartX = event.clientX;
+    panStartY = event.clientY;
+
+    if (typeof drawGridFn === 'function') {
+        drawGridFn(svg, gridData);
+    }
+}
+
+function svgPanEnd() {
+    isSvgPanning = false;
+    document.body.style.cursor = 'default';
+}
+/* End of SVG pan functionality */
+
+function handleGraphNameInput(event, nameInput) {
+    if (event.key !== 'Enter') return;
+
+    nameInput.setAttribute('readonly', true);
+    nameInput.classList.remove('editable');
+
+    const originalName = nameInput.value;
+
+    if (availableGraphs.includes(originalName)) {
+        let counter = 1;
+        let newName = originalName;
+
+        while (availableGraphs.includes(newName)) {
+            newName = `${originalName}.${String(counter).padStart(3, '0')}`;
+            counter++;
+        }
+
+        const graphDiv = document.getElementById(originalName);
+        if (graphDiv) {
+            const input = graphDiv.querySelector('input');
+            const labelSpan = document.getElementById(`${originalName}span`);
+
+            if (input) input.value = newName;
+            if (labelSpan) labelSpan.textContent = newName;
+
+            availableGraphs.push(newName);
+        }
+    } else {
+        availableGraphs.push(originalName);
+    }
+}
+
+function handleResizeStart(event, handle, container) {
+    event.preventDefault();
+
+    if (view4gen) {
+        view4.click(); // Disable resizing for 4-graph view
+        return;
+    } else if (view9gen) {
+        view9.click(); // Disable resizing for 9-graph view
+        return;
+    }
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startWidth = container.offsetWidth;
+    const startHeight = container.offsetHeight;
+    const startLeft = container.offsetLeft;
+    const startTop = container.offsetTop;
+    const corner = handle.getAttribute('data-corner');
+
+    function onResizeMouseMove(e) {
+        performResize(e, {
+            startX, startY, startWidth, startHeight, startLeft, startTop, corner, container
+        });
+    }
+
+    document.addEventListener('mousemove', onResizeMouseMove);
+    document.addEventListener('mouseup', () => {
+        document.removeEventListener('mousemove', onResizeMouseMove);
+    }, { once: true });
+}
+
+/* Window resize functionality */
+function performResize(event, { startX, startY, startWidth, startHeight, startLeft, startTop, corner, container }) {
+    let newWidth = startWidth;
+    let newHeight = startHeight;
+    let newLeft = startLeft;
+    let newTop = startTop;
+
+    if (corner.includes('right')) {
+        newWidth = startWidth + (event.clientX - startX);
+    }
+    if (corner.includes('left')) {
+        newWidth = startWidth - (event.clientX - startX);
+        newLeft = startLeft + (event.clientX - startX);
+    }
+    if (corner.includes('bottom')) {
+        newHeight = startHeight + (event.clientY - startY);
+    }
+    if (corner.includes('top')) {
+        newHeight = startHeight - (event.clientY - startY);
+        newTop = startTop + (event.clientY - startY);
+    }
+
+    const minWidth = window.innerWidth * 0.25;
+    const minHeight = window.innerHeight * 0.33;
+    const maxWidth = window.innerWidth;
+    const maxHeight = window.innerHeight;
+
+    if (newWidth > minWidth && newWidth < maxWidth) {
+        container.style.width = newWidth + 'px';
+        container.style.left = newLeft + 'px';
+    }
+    if (newHeight > minHeight && newHeight < maxHeight) {
+        container.style.height = newHeight + 'px';
+        container.style.top = newTop + 'px';
+    }
+}
+/* End of window resize functionality */
+
 /* Function to align edges */
 function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId) {
     link.attr('d', d => {
@@ -431,11 +595,11 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
                 a${loopRadius},${loopRadius} 0 1,1 0,${-2 * loopRadius}`;
 
         } else if (d.bidirectional) {
-                const dx = d.target.x - d.source.x;
-                const dy = d.target.y - d.source.y;
-                const dr = Math.sqrt(dx * dx + dy * dy) * 1.2; // Arc radius
-                return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
-            }
+            const dx = d.target.x - d.source.x;
+            const dy = d.target.y - d.source.y;
+            const dr = Math.sqrt(dx * dx + dy * dy) * 1.2; // Arc radius
+            return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+        }
         return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
     });
 
@@ -675,6 +839,97 @@ function handleAlgorithmClick(algorithm, edgesRaw, directed, displayName, method
         resultContainer.remove();
     }
 }
+
+function handleTopResizeMouseDown(event, handle, methodsElement, container) {
+    event.preventDefault();
+
+    const startY = event.clientY;
+    const startHeight = methodsElement.offsetHeight;
+
+    function onTopResizeMouseMove(e) {
+        performTopResize(e, startY, startHeight, methodsElement, container);
+    }
+
+    function onTopResizeMouseUp() {
+        document.removeEventListener('mousemove', onTopResizeMouseMove);
+    }
+
+    document.addEventListener('mousemove', onTopResizeMouseMove);
+    document.addEventListener('mouseup', onTopResizeMouseUp, { once: true });
+}
+
+function performTopResize(event, startY, startHeight, methodsElement, container) {
+    const newHeight = startHeight - (event.clientY - startY);
+    const minHeight = container.offsetHeight * 0.2;
+    const maxHeight = container.offsetHeight * 0.9;
+
+    if (newHeight >= minHeight && newHeight <= maxHeight) {
+        methodsElement.style.height = `${newHeight}px`;
+    }
+}
+
+function updateLinks(link, link2, edgeLayer) {
+
+}
+
+let isFullScreen = false;
+let oldContainerWidth, oldContainerHeight, oldContainerLeft, oldContainerTop;
+
+function toggleContainerFullScreen(container, focusAndCenterFn) {
+    if (!isFullScreen) {
+        saveOldContainerDimensions(container);
+        enterFullScreen(container);
+        focusAndCenterFn(container, false, true);
+    } else {
+        exitFullScreen(container);
+        focusAndCenterFn(container, false, null, oldContainerLeft, oldContainerTop);
+    }
+}
+
+function saveOldContainerDimensions(container) {
+    oldContainerWidth = container.style.width;
+    oldContainerHeight = container.style.height;
+    oldContainerLeft = container.offsetLeft;
+    oldContainerTop = container.offsetTop;
+    isFullScreen = true;
+}
+
+function enterFullScreen(container) {
+    container.style.width = `${window.innerWidth}px`;
+    container.style.height = `${window.innerHeight}px`;
+}
+
+function exitFullScreen(container) {
+    container.style.width = oldContainerWidth;
+    container.style.height = oldContainerHeight;
+    isFullScreen = false;
+}
+
+function enableGraphNameEditing(nameInput, displayName) {
+    nameInput.removeAttribute('readonly');
+    nameInput.classList.add('editable');
+    nameInput.focus();
+
+    // Remove the graph name from the global list
+    availableGraphs = availableGraphs.filter(graph => graph !== displayName);
+}
+
+function deleteGraph(container, displayName) {
+    // Remove the container from the DOM
+    container.remove();
+
+    // Remove from global list of graph names
+    availableGraphs = availableGraphs.filter(graph => graph !== displayName);
+
+    // Remove from the methods list UI
+    const methodsEntry = document.getElementById(displayName);
+    if (methodsEntry) methodsEntry.remove();
+
+    // Decrement graph count and hide graph options
+    graphCount--;
+    graphOptions.style.display = "none";
+}
+
 // Global variables
 let graphCount = 0;
 let availableGraphs = [];
@@ -769,7 +1024,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
     // Create a div for the rearrange nodes and applicable methods
     const operationPanel = document.createElement('div');
-    operationPanel.className = 'operationPanel';
+    operationPanel.className = 'operation-panel';
 
     // Rearrange nodes button
     const rearrangeNodes = document.createElement('button');
@@ -797,7 +1052,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     // Create new div for available methods button
     /* Available methods */
     const methodsDiv = document.createElement('div');
-    methodsDiv.className = 'methodsDiv';
+    methodsDiv.className = 'floating-menu';
     methodsDiv.style.display = 'none';
 
     // Create buttons for each applicable algorithm
@@ -824,7 +1079,6 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
             methodsDiv.style.display = 'none';
         }, { once: true });
     });
-
 
     headerSpan.appendChild(methodsDiv);
     /* End of Available methods */
@@ -872,7 +1126,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     methodsElement.className = 'methodsElem';
     methodsElement.addEventListener('wheel', (event) => {
         event.stopPropagation();
-    })
+    });
     graphContent.appendChild(methodsElement);
 
     // Resizing for methodsElement
@@ -880,39 +1134,22 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     topResizeHandle.className = 'top-resize-handle';
     // Resizing logic
     topResizeHandle.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        let startY = e.clientY;
-        let startHeight = methodsElement.offsetHeight;
-
-        function onMouseMove(event) {
-            let newHeight = startHeight - (event.clientY - startY);
-            const minHeight = container.offsetHeight * 0.2;
-            const maxHeight = container.offsetHeight * 0.9;
-            if (newHeight >= minHeight && newHeight <= maxHeight) { // Minimum height
-                methodsElement.style.height = newHeight + 'px';
-            }
-        }
-
-        function onMouseUp() {
-            document.removeEventListener('mousemove', onMouseMove);
-        }
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp, { once: true });
+        handleTopResizeMouseDown(e, topResizeHandle, methodsElement, container);
     });
+
     // End of resizing for methodsElement
     methodsElement.appendChild(topResizeHandle);
 
-    const copyr = document.createElement('div')
+    const copyr = document.createElement('div');
     copyr.style.display = 'inline-block';
     copyr.style.margin = '5px 0px 0px 10px';
     copyr.innerHTML = '© 2025 arx-net';
     methodsElement.appendChild(copyr);
 
     const methodsElementToggle = document.createElement('button');
-    methodsElementToggle.id = 'methodsElementToggle'
+    methodsElementToggle.id = 'methodsElementToggle';
     methodsElementToggle.innerHTML = '&#9776'; // Hamburger menu
-    methodsElementToggle.title = 'Toggle visibility for called methods on this graph'
+    methodsElementToggle.title = 'Toggle visibility for called methods on this graph';
     methodsElementToggle.addEventListener('click', () => {
         methodsElement.style.display = methodsElement.style.display === 'block' ? 'none' : 'block';
     })
@@ -925,7 +1162,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     closeButtonME.addEventListener('click', () => {
         methodsElementToggle.click();
     })
-    methodsElement.appendChild(closeButtonME)
+    methodsElement.appendChild(closeButtonME);
 
     // Append the graphContent to the container
     container.appendChild(graphContent);
@@ -946,7 +1183,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
         // Create context menu
         const menu = document.createElement('div');
-        menu.className = 'methodsDiv'
+        menu.className = 'floating-menu';
         menu.style.position = 'fixed';
         menu.style.left = `${event.clientX}px`;
         menu.style.top = `${event.clientY}px`;
@@ -955,7 +1192,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
         function addMenuItem(label, title, onClick) {
             const item = document.createElement('button');
             item.textContent = label;
-            item.title = title
+            item.title = title;
             item.addEventListener('click', () => {
                 onClick();
                 menu.remove();
@@ -986,7 +1223,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
         // Delete container
         addMenuItem('Delete', 'Delete this graph', () => {
-            deleteThisGraph.click()
+            deleteThisGraph.click();
         });
 
         // Create new vertex
@@ -1041,7 +1278,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
                             // Create context menu
                             const menu = document.createElement('div');
-                            menu.className = 'methodsDiv';
+                            menu.className = 'floating-menu';
                             menu.style.position = 'fixed';
                             menu.style.left = `${event.clientX}px`;
                             menu.style.top = `${event.clientY}px`;
@@ -1173,7 +1410,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
                                                 // Create context menu
                                                 const menu = document.createElement('div');
-                                                menu.className = 'methodsDiv';
+                                                menu.className = 'floating-menu';
                                                 menu.style.position = 'fixed';
                                                 menu.style.left = `${event.clientX}px`;
                                                 menu.style.top = `${event.clientY}px`;
@@ -1377,87 +1614,15 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     /* Resize functionality */
     resizeHandles.forEach(handle => {
         handle.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            if (view4gen) {
-                document.getElementById('view4').click(); // Disable resizing for 4 graph views
-            } else if (view9gen) {
-                document.getElementById('view9').click(); // Disable resizing for 9 graph views
-            }
-
-            let startX = e.clientX;
-            let startY = e.clientY;
-            let startWidth = container.offsetWidth;
-            let startHeight = container.offsetHeight;
-            let startLeft = container.offsetLeft;
-            let startTop = container.offsetTop;
-            let corner = handle.getAttribute('data-corner');
-
-            function onMouseMove(event) {
-                let newWidth = startWidth;
-                let newHeight = startHeight;
-                let newLeft = startLeft;
-                let newTop = startTop;
-
-                if (corner.includes('right')) {
-                    newWidth = startWidth + (event.clientX - startX);
-                }
-                if (corner.includes('left')) {
-                    newWidth = startWidth - (event.clientX - startX);
-                    newLeft = startLeft + (event.clientX - startX);
-                }
-                if (corner.includes('bottom')) {
-                    newHeight = startHeight + (event.clientY - startY);
-                }
-                if (corner.includes('top')) {
-                    newHeight = startHeight - (event.clientY - startY);
-                    newTop = startTop + (event.clientY - startY);
-                }
-
-                const minWidth = window.innerWidth * 0.25
-                const minHeight = window.innerHeight * 0.33
-                const maxWidth = window.innerWidth;
-                const maxHeight = window.innerHeight;
-                if (newWidth > minWidth && newWidth < maxWidth) {
-                    container.style.width = newWidth + 'px';
-                    container.style.left = newLeft + 'px';
-                }
-                if (newHeight > minHeight && newHeight < maxHeight) {
-                    container.style.height = newHeight + 'px';
-                    container.style.top = newTop + 'px';
-                }
-            }
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', () => {
-                document.removeEventListener('mousemove', onMouseMove);
-            }, { once: true });
+            handleResizeStart(e, handle, container);
         });
     });
     /* End of resize functionality */
 
     // Full screen button
-    let isFullScreen = false;
-    let oldWidth, oldHeight, oldLeft, oldTop; // Variables to store the previous dimensions and position of the container
     fullScreenButton.addEventListener('click', () => {
-        if (!isFullScreen) {
-            oldWidth = container.style.width;
-            oldHeight = container.style.height;
-            oldLeft = container.offsetTop;
-            oldTop = container.offsetTop;
-        }
-        if (!isFullScreen) {
-            isFullScreen = true;
-            container.style.width = window.innerWidth + 'px';
-            container.style.height = window.innerHeight + 'px';
-            focusAndCenterContainer(container, false, true)
-        } else {
-            isFullScreen = false;
-            container.style.width = oldWidth;
-            container.style.height = oldHeight;
-            focusAndCenterContainer(container, false, null, oldLeft, oldTop);
-        }
+        toggleContainerFullScreen(container, focusAndCenterContainer);
     });
-    /* End of container elements' functionality - Use force, show grid and close button implemented after creation of the elements */
 
     /* Outliner elements */
     // Div for the show/hide graph button and delete button
@@ -1472,6 +1637,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
     /* Graph name functionality */
     const nameInput = document.createElement('input');
+    showHideDeleteDiv.appendChild(nameInput);
     nameInput.type = 'text';
     nameInput.value = displayName;
     nameInput.title = displayName;
@@ -1482,32 +1648,12 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
     // Enable editing on double-click and apply styling
     nameInput.addEventListener('dblclick', () => {
-        nameInput.removeAttribute('readonly');
-        nameInput.classList.add('editable'); // Add class
-        nameInput.focus();
-        availableGraphs = availableGraphs.filter(graph => graph !== displayName); // Remove the graph from the list of available graphs
+        enableGraphNameEditing(nameInput, displayName);
     });
 
     // Disable editing on blur and enter key press
     nameInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            nameInput.setAttribute('readonly', true);
-            nameInput.classList.remove('editable'); // Remove class
-
-            // If name already exists in the list of names, then swap the names
-            if (availableGraphs.includes(nameInput.value)) {
-                let counter = 1
-                let newName = nameInput.value;
-                while (availableGraphs.includes(newName)) {
-                    newName = `${nameInput.value}.${String(counter).padStart(3, '0')}`;
-                    counter++;
-                }
-                let currdiv = document.getElementById(nameInput.value);
-                currdiv.getElementsByTagName('input')[0].value = newName;
-                document.getElementById(`${nameInput.value}span`).textContent = newName;
-                availableGraphs.push(newName);
-            }
-        }
+        handleGraphNameInput(event, nameInput);
     });
     nameInput.addEventListener('blur', () => {
         nameInput.setAttribute('readonly', true);
@@ -1519,8 +1665,8 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
         graphNameSpan.textContent = nameInput.value.length > 10 ? nameInput.value.substring(0, 7) + '...' : nameInput.value;
         graphNameSpan.title = nameInput.value;
     });
-    showHideDeleteDiv.appendChild(nameInput);
-    showHideDeleteDiv.id = nameInput.value
+
+    showHideDeleteDiv.id = nameInput.value;
     /* End of graph name functionality */
 
     /* Outliner graph functionalities */
@@ -1531,12 +1677,9 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     const showHideImg = document.createElement('img');
     showHideImg.src = 'images/show.png';
     showHideGraph.appendChild(showHideImg);
-    showHideGraph.addEventListener('click', function () {
+    showHideGraph.addEventListener('click', () => {
         container.style.display === 'none' ? container.style.display = 'block' : container.style.display = 'none';
         showHideImg.src = container.style.display === 'none' ? 'images/hide.png' : 'images/show.png';
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        }
     });
     closeButton.addEventListener('click', () => {
         showHideGraph.click();
@@ -1555,7 +1698,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
     /* General graph methods div */
     const graphOptions = document.createElement('div');
-    graphOptions.className = 'methodsDiv';
+    graphOptions.className = 'floating-menu';
     graphOptions.style.display = 'none';
 
     const duplicateGraph = document.createElement('button'); // Duplicate graph with weights and directions turned on/off
@@ -1573,11 +1716,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     deleteThisGraph.textContent = 'Delete graph';
     deleteThisGraph.title = 'Delete this graph';
     deleteThisGraph.addEventListener('click', () => {
-        container.remove(); // Remove the container from the DOM
-        availableGraphs = availableGraphs.filter(graph => graph !== displayName); // Remove the graph from the list of available graphs
-        document.getElementById(displayName).remove(); // Remove the graph from the list of available methods
-        graphCount--; // Decrease the graph count
-        graphOptions.style.display = "none";
+        deleteGraph(container, displayName);
     });
 
     graphOptions.appendChild(duplicateGraph);
@@ -1631,83 +1770,30 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
     /* SVG general functionalities */
     /* Zoom functionality and mousewheel binding */
-    // Zoom functionality
-    function zoom(zoomFactor) {
-        let viewBox = svg.attr('viewBox').split(' ').map(Number);
-        let [minX, minY, viewWidth, viewHeight] = viewBox;
 
-        const newWidth = viewWidth * zoomFactor;
-        const newHeight = viewHeight * zoomFactor;
-        const offsetX = (viewWidth - newWidth) / 2;
-        const offsetY = (viewHeight - newHeight) / 2;
-
-        svg.attr('viewBox', `${minX + offsetX} ${minY + offsetY} ${newWidth} ${newHeight}`);
-        drawGrid(svg, grid); // Update grid size dynamically
-    }
-
-    function zoomIn() {
-        zoom(0.9); // 10% zoom-in
-    }
-
-    function zoomOut() {
-        zoom(1.1); // 10% zoom-out
-    }
-
-    // Attach zoom to mousewheel
     // Mouse wheel zoom
-    container.addEventListener('wheel', event => {
+    container.addEventListener('wheel', (event) => {
         event.preventDefault();
-
-        // Support pinch-to-zoom (ctrlKey usually held during pinch on trackpads)
-        const isPinchZoom = event.ctrlKey;
-
         if (event.deltaY < 0) {
-            zoomIn(isPinchZoom);
+            zoomIn(svg, grid);
         } else {
-            zoomOut(isPinchZoom);
+            zoomOut(svg, grid);
         }
     });
-
-
     /* End of zoom functionality */
 
     /* Pan functionality to middle mouse hold or Ctrl + LMB and drag */
-    let isPanning = false;
-    let startX, startY;
-
+    /* Pan functionality functions */
     svg.on('mousedown', (event) => {
-        if (!(event.button === 1 || (event.button === 0 && event.ctrlKey))) return;
-
-        isPanning = true;
-        startX = event.clientX;
-        startY = event.clientY;
-        document.body.style.cursor = 'grabbing';
-
-        // Prevent default to avoid unwanted text selection or browser drag behavior
-        event.preventDefault();
+        svgPanStart(event);
     });
-
     svg.on('mousemove', (event) => {
-        if (!isPanning) return;
-
-        let viewBox = svg.attr('viewBox').split(' ').map(Number);
-        let [minX, minY, viewWidth, viewHeight] = viewBox;
-
-        let dx = (startX - event.clientX) * (viewWidth / 600); // Adjust the scale as needed
-        let dy = (startY - event.clientY) * (viewHeight / 400);
-
-        svg.attr('viewBox', `${minX + dx} ${minY + dy} ${viewWidth} ${viewHeight}`);
-        startX = event.clientX;
-        startY = event.clientY;
-        drawGrid(svg, grid); // Update grid position
+        svgPanMove(event, svg, drawGrid, grid);
     });
-
     svg.on('mouseup', () => {
-        isPanning = false;
-        document.body.style.cursor = 'default';
+        svgPanEnd();
     });
     /* End of pan functionality */
-
 
     svg.on('dblclick', () => adjustViewBox(svg, nodes, grid)); // Bind to double click to adjust viewbox
     /* End of SVG general functionalities */
@@ -1771,8 +1857,8 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     /* End of Force simulation values */
 
     // Control simulation forces with the use force checkbox
-    useForceCheckbox.addEventListener('change', function (event) {
-        if (event.target.checked) {
+    useForceCheckbox.addEventListener('change', function () {
+        if (this.checked) {
             enableForceSimulation(simulation, edges, width, height);
         } else {
             disableForceSimulation(simulation);
@@ -1840,7 +1926,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
             // Create context menu
             const menu = document.createElement('div');
-            menu.className = 'methodsDiv';
+            menu.className = 'floating-menu';
             menu.style.position = 'fixed';
             menu.style.left = `${event.clientX}px`;
             menu.style.top = `${event.clientY}px`;
@@ -1931,7 +2017,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
             document.addEventListener('mousedown', removeMenu, { once: true });
 
             document.body.appendChild(menu);
-        })
+        });
 
     // Buffer size for edge hover
     let link2 = edgeBufferLayer.selectAll('.link2')
@@ -1988,7 +2074,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
             // Create context menu
             const menu = document.createElement('div');
-            menu.className = 'methodsDiv';
+            menu.className = 'floating-menu';
             menu.style.position = 'fixed';
             menu.style.left = `${event.clientX}px`;
             menu.style.top = `${event.clientY}px`;
@@ -2120,7 +2206,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
                                 // Create context menu
                                 const menu = document.createElement('div');
-                                menu.className = 'methodsDiv';
+                                menu.className = 'floating-menu';
                                 menu.style.position = 'fixed';
                                 menu.style.left = `${event.clientX}px`;
                                 menu.style.top = `${event.clientY}px`;

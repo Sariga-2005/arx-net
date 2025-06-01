@@ -431,14 +431,14 @@ svg {
 }
 
 
-.operationPanel {
+.operation-panel {
     display: inline-block;
     margin-left: 10px;
     user-select: none;
 }
 
 /* Floating menu for methods */
-.methodsDiv {
+.floating-menu {
     position: absolute;
     background-color: var(--bg-secondary);
     padding: 3px;
@@ -446,7 +446,7 @@ svg {
     z-index: 3;
 }
 
-.methodsDiv button {
+.floating-menu button {
     display: block;
     height: 30px;
     width: 100%;
@@ -457,7 +457,7 @@ svg {
     padding: 3px 10px 3px 8px;
 }
 
-.methodsDiv button:hover {
+.floating-menu button:hover {
     color: var(--inverted-text);
     background-color: var(--accent);
     filter: none;
