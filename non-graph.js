@@ -1,28 +1,9 @@
-// About section functionality
-const aboutBtn = document.getElementById('about');
-const aboutDiv = document.getElementById('aboutDiv');
-
 function handleOutsideClickAbout(event) {
     if (!aboutDiv.contains(event.target) && event.target !== aboutBtn) {
         aboutDiv.style.display = 'none';
         document.removeEventListener('click', handleOutsideClickAbout);
     }
 }
-
-// Graph generation menu visibility toggle functionality
-const cgm = document.getElementById('createGraphMenu')
-const graphGenMenu = document.getElementById('sourceInput')
-cgm.addEventListener('click', function () {
-    if (this.getElementsByTagName('img')[0].src.endsWith('sidebaropen.png')) {
-        this.getElementsByTagName('img')[0].src = 'images/sidebarclose.png';
-        graphGenMenu.style.display = 'block';
-        outliner.style.height = '15vh';
-    } else {
-        this.getElementsByTagName('img')[0].src = 'images/sidebaropen.png';
-        graphGenMenu.style.display = 'none';
-        outliner.style.height = '82vh';
-    }
-})
 
 aboutBtn.addEventListener('click', function (event) {
     event.stopPropagation();
@@ -37,11 +18,20 @@ aboutBtn.addEventListener('click', function (event) {
     }
 });
 
-// Maximum edges calculation functionality
-const selfLoops = document.getElementById('selfLoops')
-const duplicateEdges = document.getElementById('duplicateEdges')
-const isDirected = document.getElementById('directed')
+// Graph generation menu visibility toggle functionality
+cgb.addEventListener('click', function () {
+    if (this.getElementsByTagName('img')[0].src.endsWith('sidebaropen.png')) {
+        this.getElementsByTagName('img')[0].src = 'images/sidebarclose.png';
+        graphGenMenu.style.display = 'block';
+        outliner.style.height = '15vh';
+    } else {
+        this.getElementsByTagName('img')[0].src = 'images/sidebaropen.png';
+        graphGenMenu.style.display = 'none';
+        outliner.style.height = '82vh';
+    }
+});
 
+// Maximum edges calculation functionality
 function updateMinMax() {
     const updatedValue = parseInt(document.getElementById("numNodes").value);
     const maxRecEl = document.getElementById("maxRec");

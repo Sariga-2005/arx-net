@@ -6,11 +6,6 @@ document.getElementById('edges').addEventListener('keydown', function (event) {
 });
 
 // Graph scaling functionality
-const view4 = document.getElementById('view4');
-const view9 = document.getElementById('view9');
-let view4gen = false;
-let view9gen = false;
-
 view4.addEventListener('click', function () {
     const img = view4.getElementsByTagName('img')[0];
     if (view4gen) { // Button is enabled here, actions to disable
@@ -53,8 +48,6 @@ view9.addEventListener('click', function () {
 
 
 // Graph snapping functionality
-const snap = document.getElementById('snap');
-let snapping = false;
 snap.addEventListener('click', function () {
     snapping = !snapping;
     const img = snap.getElementsByTagName('img')[0];
@@ -62,8 +55,6 @@ snap.addEventListener('click', function () {
 });
 
 // Show/Hide All functionality
-const showHideAll = document.getElementById('showHideAll');
-let showHideAllGraphs = true;
 showHideAll.addEventListener('click', () => {
     const allGraphs = document.getElementsByClassName('showHideCurrentGraph');
     if (showHideAllGraphs) {
@@ -88,7 +79,6 @@ showHideAll.addEventListener('click', () => {
 });
 
 // Clear All functionality
-const clearAll = document.getElementById('clearAll')
 clearAll.addEventListener('click', () => {
     if (confirm('Are you sure want to delete all graphs? This action cannot be undone.')) {
         const allGraphs = document.getElementsByClassName('deleteCurrentGraph')
