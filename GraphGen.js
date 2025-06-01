@@ -10,15 +10,15 @@
 let graphCount = 0;
 let availableGraphs = [];
 
-// Graph style details
-const edgeColor = '#a3bf60'; // Color of the links between nodes
-const edgeColorHover = '#9e7bb0'; // Color of the links when hovered on
-const hoverColor = '#7a9ec2'; // Color of nodes when hovered on
-const nodeColor = '#ffc66d'; // Color of the nodes
-const nodeLabelColor = '#000'; // Color of the text on the nodes
-const edgeWeightColor = '#fff'; // Color of the edge weights
-const gridLineColor = '#3c3d3c'; // Color of the grid lines
-const dragNodeColor = '#7a9ec2'; // Color of the nodes when dragged
+// Graph style details. Can be changed in styles.css
+let edgeColor = getComputedStyle(document.documentElement).getPropertyValue('--edge-color').trim();
+let edgeHoverColor = getComputedStyle(document.documentElement).getPropertyValue('--edge-hover-color').trim();
+let nodeColor = getComputedStyle(document.documentElement).getPropertyValue('--node-color').trim();
+let nodeHoverColor = getComputedStyle(document.documentElement).getPropertyValue('--node-hover-color').trim();
+let nodeLabelColor = getComputedStyle(document.documentElement).getPropertyValue('--node-label-color').trim();
+let edgeWeightColor = getComputedStyle(document.documentElement).getPropertyValue('--edge-weight-color').trim();
+let gridLineColor = getComputedStyle(document.documentElement).getPropertyValue('--grid-line-color').trim();
+let dragNodeColor = getComputedStyle(document.documentElement).getPropertyValue('--drag-node-color').trim();
 
 // Available methods
 const algorithms = [
@@ -61,7 +61,7 @@ function focusOnThisContainer(container) {
         c.style.zIndex = 1;
         c.style.boxShadow = 'none';
     });
-    container.style.zIndex = 999;
+    container.style.zIndex = 2;
     container.style.boxShadow = '0px 0px 16px rgba(0, 0, 0, 0.5)';
 }
 // Focus and center this container
@@ -706,8 +706,8 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     headerSpan.appendChild(document.createTextNode('Show grid'));
 
     // Create a div for the rearrange nodes and applicable methods
-    const rearrangeMethods = document.createElement('div');
-    rearrangeMethods.className = 'rearrangeMethods';
+    const operationPanel = document.createElement('div');
+    operationPanel.className = 'operationPanel';
 
     // Rearrange nodes button
     const rearrangeNodes = document.createElement('button');
@@ -715,15 +715,15 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     const rearrangeNodesImg = document.createElement('img');
     rearrangeNodesImg.src = 'images/rearrange.png';
     rearrangeNodes.appendChild(rearrangeNodesImg);
-    rearrangeMethods.appendChild(rearrangeNodes);
+    operationPanel.appendChild(rearrangeNodes);
 
     // Applicable methods button
     const methodsButton = document.createElement('button');
     methodsButton.title = 'Show available methods';
     methodsButton.innerHTML = '<b>&#8964;</b>';
-    rearrangeMethods.appendChild(methodsButton);
+    operationPanel.appendChild(methodsButton);
 
-    headerSpan.appendChild(rearrangeMethods);
+    headerSpan.appendChild(operationPanel);
 
     // Input Validation - Parse edges
     edges = parseEdges(edgesInput, directed);
@@ -950,17 +950,6 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     copyr.innerHTML = '© 2025 arx-net';
     methodsElement.appendChild(copyr);
 
-    const closeButtonME = document.createElement('button');
-    closeButtonME.id = 'closeButtonME'
-    closeButtonME.innerHTML = '&#10005;';
-    closeButtonME.title = 'Close graph methods window';
-    closeButtonME.addEventListener('click', () => {
-        methodsElementToggle.click();
-    })
-    methodsElement.appendChild(closeButtonME)
-
-
-
     const methodsElementToggle = document.createElement('button');
     methodsElementToggle.id = 'methodsElementToggle'
     methodsElementToggle.innerHTML = '&#9776'; // Hamburger menu
@@ -968,7 +957,16 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     methodsElementToggle.addEventListener('click', () => {
         methodsElement.style.display = methodsElement.style.display === 'block' ? 'none' : 'block';
     })
-    rearrangeMethods.appendChild(methodsElementToggle);
+    operationPanel.appendChild(methodsElementToggle);
+
+    const closeButtonME = document.createElement('button');
+    closeButtonME.className = 'closeButtonME'
+    closeButtonME.innerHTML = '&#10005;';
+    closeButtonME.title = 'Close graph methods window';
+    closeButtonME.addEventListener('click', () => {
+        methodsElementToggle.click();
+    })
+    methodsElement.appendChild(closeButtonME)
 
     // Append the graphContent to the container
     container.appendChild(graphContent);
@@ -1061,7 +1059,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                         .attr('cx', d => d.x)
                         .attr('cy', d => d.y)
                         .on('mouseover', function () {
-                            d3.select(this).attr('fill', hoverColor);
+                            d3.select(this).attr('fill', nodeHoverColor);
                         })
                         .on('mouseout', function () {
                             d3.select(this).attr('fill', nodeColor);
@@ -1173,7 +1171,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                                             .attr('stroke', edgeColor)
                                             .attr('stroke-width', 1.5)
                                             .on('mouseover', function () {
-                                                d3.select(this).attr('stroke', edgeColorHover);
+                                                d3.select(this).attr('stroke', edgeHoverColor);
                                                 // Also change color of the directed marker (arrowhead) if present
                                                 if (directed) {
                                                     const markerUrl = d3.select(this).attr('marker-end');
@@ -1186,7 +1184,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                                                             d3.select(svgElement)
                                                                 .select(`#${markerId}`)
                                                                 .select('path')
-                                                                .attr('fill', edgeColorHover);
+                                                                .attr('fill', edgeHoverColor);
                                                         }
                                                     }
                                                 }
@@ -1600,7 +1598,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
     /* General graph methods div */
     const graphOptions = document.createElement('div');
-    graphOptions.className = 'graphOptions';
+    graphOptions.className = 'methodsDiv';
     graphOptions.style.display = 'none';
 
     const duplicateGraph = document.createElement('button'); // Duplicate graph with weights and directions turned on/off
@@ -1842,7 +1840,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
         .attr('stroke', edgeColor)
         .attr('stroke-width', 1.5)
         .on('mouseover', function () {
-            d3.select(this).attr('stroke', edgeColorHover);
+            d3.select(this).attr('stroke', edgeHoverColor);
             // Also change color of the directed marker (arrowhead) if present
             if (directed) {
                 const markerUrl = d3.select(this).attr('marker-end');
@@ -1855,7 +1853,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                         d3.select(svgElement)
                             .select(`#${markerId}`)
                             .select('path')
-                            .attr('fill', edgeColorHover);
+                            .attr('fill', edgeHoverColor);
                     }
                 }
             }
@@ -2016,7 +2014,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
         .attr('r', 20)
         .attr('fill', nodeColor)
         .on('mouseover', function () {
-            d3.select(this).attr('fill', hoverColor);
+            d3.select(this).attr('fill', nodeHoverColor);
         })
         .on('mouseout', function () {
             d3.select(this).attr('fill', nodeColor);
@@ -2122,7 +2120,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                             .attr('stroke', edgeColor)
                             .attr('stroke-width', 1.5)
                             .on('mouseover', function () {
-                                d3.select(this).attr('stroke', edgeColorHover);
+                                d3.select(this).attr('stroke', edgeHoverColor);
                                 // Also change color of the directed marker (arrowhead) if present
                                 if (directed) {
                                     const markerUrl = d3.select(this).attr('marker-end');
@@ -2135,7 +2133,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                                             d3.select(svgElement)
                                                 .select(`#${markerId}`)
                                                 .select('path')
-                                                .attr('fill', edgeColorHover);
+                                                .attr('fill', edgeHoverColor);
                                         }
                                     }
                                 }

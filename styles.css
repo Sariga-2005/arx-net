@@ -1,0 +1,463 @@
+/* Global Styles */
+* {
+    box-sizing: border-box;
+    text-decoration: none;
+    /* Don't use styles on anything unless specifically mentioned */
+    outline: none;
+
+    /* Global colors, can be changed for light mode */
+    --accent: #ffc66d;
+    --accent-inverted: #003992;
+    /* Buttons that contain images are inverted in color for visibility, this color will match accent when inverted */
+    --bg-primary: #1d1d1d;
+    --bg-secondary: #141414;
+    --text-primary: #fff;
+    --inverted-text: #000;
+    --checkmark-color: #000;
+    --highlight-button-color: #424242;
+
+    /* Graph colors */
+    --edge-color: #a3bf60;
+    /* Color of the links between nodes */
+    --edge-hover-color: #9e7bb0;
+    /* Color of the links when hovered on */
+    --node-color: #ffc66d;
+    /* Color of the nodes */
+    --node-hover-color: #7a9ec2;
+    /* Color of nodes when hovered on */
+    --node-label-color: #000;
+    /* Color of the text on the nodes */
+    --edge-weight-color: #fff;
+    /* Color of the edge weights */
+    --grid-line-color: #3c3d3c;
+    /* Color of the grid lines */
+    --drag-node-color: #7a9ec2;
+    /* Color of the nodes when dragged */
+
+    color: var(--text-primary);
+}
+
+/* z-index values */
+/*
+    1 - Inactive graph container
+    2 - Active graph container
+    3 - Resize handles
+    4 - About div
+*/
+
+body {
+    height: 100vh;
+    width: 100vw;
+    background-color: var(--bg-primary);
+    text-align: left;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #3f3f3f;
+    border-radius: 10px;
+    border: 2px solid var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #555;
+}
+
+/* Inputs */
+input[type="text"] {
+    display: block;
+    width: calc(100% - 20px);
+    background: none;
+    border: 1.5px solid var(--accent);
+    padding: 10px;
+}
+
+/* Checkbox */
+input[type="checkbox"] {
+    appearance: none;
+    position: relative;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    vertical-align: middle;
+    background-color: #545454;
+    border: none;
+    border-radius: 1px;
+    margin: 0px 5px 3px 15px;
+}
+
+input[type="checkbox"]:hover {
+    background-color: #7e7e7e;
+}
+
+input[type="checkbox"]:checked {
+    background-color: var(--accent);
+}
+
+input[type="checkbox"]:checked::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -60%) rotate(40deg);
+    width: 3px;
+    /* Checkmark style */
+    height: 8px;
+    border: solid var(--checkmark-color);
+    border-width: 0 2px 2px 0;
+}
+
+/* Images */
+img {
+    height: 20px;
+    width: 20px;
+    filter: invert(1);
+}
+
+/* General window styles */
+/* About div - Contains the information about the application */
+.aboutDiv {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 37.5%;
+    translate: -50% -50%;
+    height: fit-content;
+    max-height: 90%;
+    width: 35%;
+    background-color: var(--bg-secondary);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+    padding: 20px;
+    overflow-y: auto;
+    z-index: 4;
+}
+
+/* Main container for the application, equivalent to root in React */
+.container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: auto;
+    min-height: 100%;
+    width: 25%;
+    background-color: var(--bg-secondary);
+    padding: 10px;
+    z-index: 1;
+}
+
+.container p,
+.aboutDiv p {
+    margin: 10px;
+}
+
+/* Buttons to generate graphs */
+#generateGraph,
+#generateRandomGraph {
+    font-size: medium;
+    width: calc(100% - 20px);
+    color: var(--inverted-text);
+    background-color: var(--accent);
+    border: 1.5px solid transparent;
+    border-radius: 3px;
+    margin: 20px 0px 10px 0px;
+    padding: 5px 10px;
+    transition: background-color 0.3s, color 0.3s, border 0.3s;
+}
+
+#generateRandomGraph {
+    margin-top: 5px;
+}
+
+#generateGraph:hover,
+#generateRandomGraph:hover {
+    cursor: pointer;
+    background-color: transparent;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+}
+
+/* Contains the inputs for random graph generation */
+.input-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.input-row input[type="text"] {
+    width: 15%;
+    margin-right: 10px;
+}
+
+.input-row label {
+    margin-right: 5px;
+    width: 30%;
+}
+
+/* Contains the list of graphs */
+.outliner {
+    margin-top: 15px;
+    display: block;
+    height: 15vh;
+    padding: 0px 20px 20px 20px;
+    overflow-y: scroll;
+    box-sizing: border-box;
+}
+
+.outliner button,
+h1 button {
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    justify-content: center;
+    align-items: center;
+    vertical-align: middle;
+    background: none;
+    border: none;
+    border-radius: 3px;
+    margin: 0;
+}
+
+.outliner button:hover,
+h1 button:hover {
+    background-color: var(--highlight-button-color);
+}
+
+.outliner img {
+    width: 16px;
+    height: 16px;
+    filter: invert(1);
+}
+
+/* Graph generator menu within outliner */
+.graphGenerator {
+    height: fit-content;
+    margin: 0px 0px 20px 20px;
+}
+
+
+/* Graph window styles */
+/* Show/Hide/Delete Div - Contains the entry of the graph in the outliner */
+.showHideDeleteDiv {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: 10px;
+    border-radius: 3px;
+}
+
+.showHideDeleteDiv:hover {
+    background-color: var(--bg-primary);
+}
+
+.showHideDeleteDiv button {
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    justify-content: center;
+    align-items: center;
+    vertical-align: middle;
+    background: none;
+    border: none;
+    border-radius: 3px;
+    margin: 0;
+}
+
+.showHideDeleteDiv button:hover {
+    background-color: var(--highlight-button-color);
+}
+
+.showHideDeleteDiv input[type='text'] {
+    cursor: default;
+    border: none;
+    background: none;
+    width: 30%;
+    padding: 5px;
+    border: 1px solid transparent;
+}
+
+.showHideDeleteDiv [type='text'].editable {
+    cursor: text;
+    border: 1px solid var(--accent);
+    background-color: var(--bg-primary);
+}
+
+.showHideDeleteDiv img {
+    height: 16px;
+    width: 16px;
+    filter: invert(1);
+}
+
+/* This is where the graph svg element is rendered */
+.graphContainer {
+    position: absolute;
+    background-color: #ff0000;
+    /* If this background color is seen, then there is an error in positioning */
+    border: 2px solid var(--bg-secondary);
+    box-shadow: 0px 0px 16px rgba(0, 0, 0, 0.5);
+    border-radius: 7px;
+    overflow: hidden;
+}
+
+/* Container the header elements of the container - Name, Use force, Grid, Rearrange nodes, methods called toggle, minimize/maximize and close */
+.graphHeader {
+    display: flex;
+    background-color: var(--bg-secondary);
+    justify-content: space-between;
+    align-items: center;
+    white-space: nowrap;
+    padding: 0 5px 0 10px;
+}
+
+.graphHeader button {
+    aspect-ratio: 1;
+    margin: none;
+    vertical-align: middle;
+    text-align: center;
+    background: none;
+    border: none;
+    border-radius: 50%;
+}
+
+.graphHeader button:hover {
+    background: var(--accent-inverted);
+    color: var(--text-primary);
+    filter: invert(1);
+}
+
+/* Background color of the svg element */
+.graphContent {
+    background-color: var(--bg-primary);
+}
+
+/* Window that displays called methods on the graph */
+.methodsElem {
+    display: none;
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    height: 30%;
+    width: calc(100% - 4px);
+    font-weight: bold;
+    background-color: var(--bg-secondary);
+    overflow-y: auto;
+}
+
+.methodsElem p {
+    margin: 10px;
+    width: 80%;
+}
+
+/* Closes the methods element window */
+.closeButtonME {
+    display: inline-flex;
+    position: sticky;
+    top: 1%;
+    float: right;
+    border: none;
+    aspect-ratio: 1;
+    background: none;
+    border-radius: 50%;
+    align-items: center;
+    text-align: center;
+    margin: 3px;
+}
+
+.closeButtonME:hover {
+    background: var(--accent);
+    color: var(--inverted-text);
+}
+
+/* Resize handles for the graph window */
+.resize-handle {
+    position: absolute;
+    height: 10px;
+    width: 10px;
+    z-index: 3;
+}
+
+.bottom-right {
+    bottom: 0;
+    right: 0;
+    cursor: nwse-resize;
+}
+
+.bottom-left {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+}
+
+.top-right {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+}
+
+.top-left {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+}
+
+/* Resize handle for methods element */
+.top-resize-handle {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    cursor: ns-resize;
+    z-index: 3;
+}
+
+/* The SVG element is where the graph is rendered */
+svg {
+    height: 100%;
+    width: 100%;
+    user-select: none;
+}
+
+
+.operationPanel {
+    display: inline-block;
+    margin-left: 10px;
+    user-select: none;
+}
+
+/* Floating menu for methods */
+.methodsDiv {
+    position: absolute;
+    background-color: var(--bg-secondary);
+    padding: 3px;
+    border-radius: 3px;
+    z-index: 3;
+}
+
+.methodsDiv button {
+    display: block;
+    height: 30px;
+    width: 100%;
+    text-align: left;
+    background-color: var(--bg-secondary);
+    border: none;
+    border-radius: 3px;
+    padding: 3px 10px 3px 8px;
+}
+
+.methodsDiv button:hover {
+    color: var(--inverted-text);
+    background-color: var(--accent);
+    filter: none;
+}
