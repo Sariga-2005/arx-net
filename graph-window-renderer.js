@@ -6,9 +6,6 @@
 3. const view4gen
 4. const view9gen
 */
-// Global variables
-let graphCount = 0;
-let availableGraphs = [];
 
 // Graph style details. Can be changed in styles.css
 let edgeColor = getComputedStyle(document.documentElement).getPropertyValue('--edge-color').trim();
@@ -55,7 +52,7 @@ function filterAlgorithms(algorithms, directed, weighted) {
 }
 /* End of Applicable methods */
 
-// Functions exclusive to container
+// Focus on this container 
 function focusOnThisContainer(container) {
     document.querySelectorAll('.graphContainer').forEach(c => {
         c.style.zIndex = 1;
@@ -64,7 +61,8 @@ function focusOnThisContainer(container) {
     container.style.zIndex = 2;
     container.style.boxShadow = '0px 0px 16px rgba(0, 0, 0, 0.5)';
 }
-// Focus and center this container
+
+// Focus on this container and center it in the viewport
 function focusAndCenterContainer(container, resize = true, fromCenter = false, oldLeft = null, oldTop = null) {
     if (resize) {
         container.style.height = '50%';
@@ -84,9 +82,10 @@ function focusAndCenterContainer(container, resize = true, fromCenter = false, o
         }
         container.style.top = 'calc(50% - ' + offsetY + 'px)';
     }
-    focusOnThisContainer(container)
+    focusOnThisContainer(container);
 }
 
+// Snapping functionality for 4 and 9 graph views
 function snapPosition(x, y) {
     let parentWidth = document.body.offsetWidth;
     let parentHeight = document.body.offsetHeight;
@@ -112,6 +111,7 @@ function snapPosition(x, y) {
     return [x, y];
 }
 
+// Dragging functionality for the container
 function setContainerPosition(e, container) {
     if (e.target.tagName.toLowerCase() === 'input' || e.target.closest('button')) return;
     e.preventDefault();
@@ -133,6 +133,7 @@ function setContainerPosition(e, container) {
     }, { once: true });
 }
 
+// Parse edges input into an array of edge objects
 function parseEdges(edgesInput, directed = true) {
     let edgesRaw = edgesInput.split(',').map(edge => {
         edge = edge.trim();
@@ -190,6 +191,7 @@ function parseEdges(edgesInput, directed = true) {
     return edgesRaw;
 }
 
+// Inverse of parseEdges function
 function stringifyEdges(edgesRaw) {
     return edgesRaw
         .map(edge => `(${edge.source}_${edge.target}_${edge.weight})`)
@@ -197,10 +199,20 @@ function stringifyEdges(edgesRaw) {
 }
 
 const graphInputField = document.getElementById('edges');
+const graphInputVertices = document.getElementById('vertices');
 
 // This function currently supports generating multigraphs as well, but that functionality has been disabled
-const connected = document.getElementById('connectedGraph')
-const maxWeight = document.getElementById('maxWeight')
+const connected = document.getElementById('connectedGraph');
+const maxWeight = document.getElementById('maxWeight');
+
+function indexToLabel(index) {
+    let label = '';
+    while (index >= 0) {
+        label = String.fromCharCode(97 + (index % 26)) + label;
+        index = Math.floor(index / 26) - 1;
+    }
+    return label;
+}
 
 function generateRandomGraph(vertexCount, edgeCount, options = {}) {
     const {
@@ -211,15 +223,6 @@ function generateRandomGraph(vertexCount, edgeCount, options = {}) {
         maxWeightValue = parseInt(maxWeight.value),
         isDirectedValue = isDirected.checked
     } = options;
-
-    function indexToLabel(index) {
-        let label = '';
-        while (index >= 0) {
-            label = String.fromCharCode(97 + (index % 26)) + label;
-            index = Math.floor(index / 26) - 1;
-        }
-        return label;
-    }
 
     if (vertexCount <= 0) {
         alert("Vertex count must be greater than 0.");
@@ -248,10 +251,8 @@ function generateRandomGraph(vertexCount, edgeCount, options = {}) {
     if (edgeCount < minEdgesToConnect) {
         if (ensureConnected) {
             alert(`To ensure connectivity, at least ${minEdgesToConnect} edges are needed. Using minimum required.`);
-        } else {
-            alert(`Edge count must be at least " ${minEdgesToConnect}.`);
+            edgeCount = minEdgesToConnect;
         }
-        edgeCount = minEdgesToConnect;
     }
 
     if (!allowDuplicates && edgeCount > maxEdgesWithoutDuplicates) {
@@ -317,20 +318,9 @@ function generateRandomGraph(vertexCount, edgeCount, options = {}) {
         usedVertices.add(v);
     }
 
-    // Step 3: Add isolated vertices if disconnected and not all are present
-    const unused = vertices.filter(v => !usedVertices.has(v));
-    for (const u of unused) {
-        const v = vertices.find(x => x !== u);
-        if (!v) break;
-        const weight = Math.floor(Math.random() * (maxWeightValue - minWeightValue + 1)) + minWeightValue;
-        const key = `${u}_${v}`;
-        if (!allowDuplicates && edges.has(key)) continue;
-        if (!allowDuplicates) edges.add(key);
-        edgeList.push({ source: u, target: v, weight });
-    }
-
     graphInputField.value = stringifyEdges(edgeList);
-    addGraph(stringifyEdges(edgeList));
+    graphInputVertices.value = vertices.join(', ');
+    addGraph();
 }
 
 const generateRandomButton = document.getElementById('generateRandomGraph');
@@ -424,7 +414,7 @@ function adjustViewBox(svg, nodes, grid) { // Takes grid as a parameter to redra
 /* End of viewbox adjustment */
 
 /* Function to align edges */
-function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer) {
+function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId) {
     link.attr('d', d => {
         // Arc bidirectional edges
         if (d.selfLoop) {
@@ -440,8 +430,7 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
                 a${loopRadius},${loopRadius} 0 1,1 0,${2 * loopRadius}
                 a${loopRadius},${loopRadius} 0 1,1 0,${-2 * loopRadius}`;
 
-        } else
-            if (d.bidirectional) {
+        } else if (d.bidirectional) {
                 const dx = d.target.x - d.source.x;
                 const dy = d.target.y - d.source.y;
                 const dr = Math.sqrt(dx * dx + dy * dy) * 1.2; // Arc radius
@@ -450,7 +439,6 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
         return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
     });
 
-    // if (directed) {
     if (link.attr('class') === 'link') {
         link.each(function (d) {
             const path = d3.select(this);
@@ -501,7 +489,6 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
                     .attr('orient', 'auto');
             }
         });
-        // }
 
         // Add weights if weighted
         if (weighted) {
@@ -545,17 +532,6 @@ function setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg,
     }
 }
 /* End of align edges */
-
-function setMethodsElementSize(container, element) {
-    // const containerLeft = container.offsetLeft;
-    // const containerTop = container.offsetTop;
-    // const containerWidth = container.offsetWidth;
-
-    element.style.bottom = '2px';
-    element.style.left = '2px';
-    element.style.width = 'calc(100% - 4px)';
-    element.style.height = '30%';
-}
 
 // Function to enable force
 function enableForceSimulation(simulation, edges, width, height) {
@@ -622,6 +598,86 @@ function smoothFunction(x, k = 0.02, c = 275) {
     return result;
 }
 
+function handleAlgorithmClick(algorithm, edgesRaw, directed, displayName, methodsElement) {
+    const resultContainer = document.createElement('p');
+    let result = null;
+    let label = '';
+
+    const getSource = (promptText) => {
+        const input = prompt(promptText);
+        return input ? input.toUpperCase() : null;
+    };
+
+    switch (algorithm.name) {
+        case 'bfs': {
+            const source = getSource("Enter source vertex");
+            if (!source) break;
+            result = bfs(edgesRaw, source, directed);
+            label = `BFS with ${source} as source node: `;
+            break;
+        }
+        case 'dfs': {
+            const source = getSource("Enter source vertex");
+            result = dfs(edgesRaw, source || undefined, directed);
+            label = `DFS through ${displayName}${source ? ` with ${source} as source node` : ''}: `;
+            break;
+        }
+        case 'dijkstra': {
+            const source = getSource("Enter source vertex");
+            if (!source) break;
+            result = dijkstra(edgesRaw, source, directed);
+            label = `Dijkstra's through ${displayName} with ${source} as source node: <br>`;
+            break;
+        }
+        case 'floydWarshall':
+            result = floydWarshall(edgesRaw);
+            label = `Floyd Warshall through ${displayName}: `;
+            break;
+
+        case 'bellmanFord': {
+            const source = getSource("Enter source vertex");
+            if (!source) break;
+            result = bellmanFord(edgesRaw, source, directed);
+            label = `Bellman Ford through ${displayName} with ${source} as source node: `;
+            break;
+        }
+        case 'mst':
+            result = mst(edgesRaw);
+            label = `MST through ${displayName}: `;
+            break;
+
+        case 'topologicalSort':
+            result = topologicalSort(edgesRaw);
+            label = `Topological Sort through ${displayName}: `;
+            break;
+
+        case 'scc':
+            result = StronglyConnectedComponents(edgesRaw);
+            label = `SCC through ${displayName}: `;
+            break;
+
+        case 'bcc':
+            result = BiconnectedComponents(edgesRaw);
+            label = `BCC through ${displayName}: `;
+            break;
+
+        default:
+            alert("Algorithm not implemented.");
+            return;
+    }
+
+    if (result !== null) {
+        resultContainer.innerHTML = `<span style="color: #ffc66d;">${label}</span> ${result}`;
+        methodsElement.appendChild(resultContainer);
+        methodsElement.style.display = 'block';
+        methodsElement.scrollTop = methodsElement.scrollHeight;
+    } else {
+        resultContainer.remove();
+    }
+}
+// Global variables
+let graphCount = 0;
+let availableGraphs = [];
 function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core function will all functionalities
     // Common arrow head ID for this graph
     const arrowId = `arrowHead${graphCount}`; // Creating separate arrow heads for each graph, while also grouping the similar ones
@@ -652,6 +708,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     const container = document.createElement('div');
     document.body.appendChild(container); // Append the container initially to calculate child properties
     container.className = 'graphContainer';
+
     // Defining position and dimensions of the graph window here to check for grid view of the containers
     if (view9gen) {
         container.style.width = '25%';
@@ -751,110 +808,8 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
         button.title = algorithm.title;
 
         button.addEventListener('click', () => {
-            let result;
-            let resultContainer = document.createElement('p')
-            switch (algorithm.name) {
-                case 'bfs':
-                    let bfsSource = prompt("Enter source vertex").toUpperCase();
-                    result = bfs(edgesRaw, bfsSource, directed);
-                    if (result !== null) {
-                        resultContainer.innerHTML = `<font style="color: #ffc66d;">BFS with ${bfsSource} as source node: </font> ${result}`;
-                        methodsElement.appendChild(resultContainer);
-                        methodsElement.style.display = 'block';
-                    } else {
-                        resultContainer.remove();
-                    }
-                    break;
-                case 'dfs':
-                    let dfsSource = prompt("Enter source vertex").toUpperCase();
-                    result = dfs(edgesRaw, dfsSource || undefined, directed);
-                    if (result !== null) {
-                        resultContainer.innerHTML = `<font style="color: #ffc66d;">DFS through ${displayName}${dfsSource ? ` with ${dfsSource} as source node` : ''}: </font> ${result}`;
-                        methodsElement.appendChild(resultContainer);
-                        methodsElement.style.display = 'block';
-                        methodsElement.scrollTop = methodsElement.scrollHeight; // Scroll to the bottom of the methodsElement
-                    } else {
-                        resultContainer.remove();
-                    }
-                    break;
-                case 'dijkstra':
-                    let dijkstraSource = prompt("Enter source vertex").toUpperCase();
-                    result = dijkstra(edgesRaw, dijkstraSource, directed);
-                    if (result !== null) {
-                        resultContainer.innerHTML = `<font style="color: #ffc66d;">Dijkstra's through ${displayName} with ${dijkstraSource} as source node: </font> <br> ${result} <br>`;
-                        methodsElement.appendChild(resultContainer);
-                        methodsElement.style.display = 'block';
-                    } else {
-                        resultContainer.remove();
-                    }
-                    break;
-                case 'floydWarshall':
-                    result = floydWarshall(edgesRaw);
-                    if (result !== null) {
-                        resultContainer.innerHTML = `<font style="color: #ffc66d;">Floyd Warshall through ${displayName}: </font> ${result}`;
-                        methodsElement.appendChild(resultContainer);
-                        methodsElement.style.display = 'block';
-                    } else {
-                        resultContainer.remove();
-                    }
-                    break;
-                case 'bellmanFord':
-                    let bellmanSource = prompt("Enter source vertex").toUpperCase();
-                    result = bellmanFord(edgesRaw, bellmanSource, directed);
-                    if (result !== null) {
-                        resultContainer.innerHTML = `<font style="color: #ffc66d;">Bellman Ford through ${displayName} with ${bellmanSource} as source node: </font> ${result}`;
-                        methodsElement.appendChild(resultContainer);
-                        methodsElement.style.display = 'block';
-                    } else {
-                        resultContainer.remove();
-                    }
-                    break;
-                case 'mst':
-                    result = mst(edgesRaw);
-                    if (result !== null) {
-                        resultContainer.innerHTML = `<font style="color: #ffc66d;">MST through ${displayName}: </font> ${result}`;
-                        methodsElement.appendChild(resultContainer);
-                        methodsElement.style.display = 'block';
-                    } else {
-                        resultContainer.remove();
-                    }
-                    break;
-                case 'topologicalSort':
-                    result = topologicalSort(edgesRaw);
-                    if (result !== null) {
-                        resultContainer.innerHTML = `<font style="color: #ffc66d;">Topological Sort through ${displayName}: </font> ${result}`;
-                        methodsElement.appendChild(resultContainer);
-                        methodsElement.style.display = 'block';
-                    } else {
-                        resultContainer.remove();
-                    }
-                    break;
-                case 'scc':
-                    result = StronglyConnectedComponents(edgesRaw);
-                    if (result !== null) {
-                        resultContainer.innerHTML = `<font style="color: #ffc66d;">SCC through ${displayName}: </font> ${result}`;
-                        methodsElement.appendChild(resultContainer);
-                        methodsElement.style.display = 'block';
-                    } else {
-                        resultContainer.remove();
-                    }
-                    break;
-                case 'bcc':
-                    result = BiconnectedComponents(edgesRaw);
-                    if (result !== null) {
-                        resultContainer.innerHTML = `<font style="color: #ffc66d;">BCC through ${displayName}: </font> ${result}`;
-                        methodsElement.appendChild(resultContainer);
-                        methodsElement.style.display = 'block';
-                    } else {
-                        resultContainer.remove();
-                    }
-                    break;
-                default:
-                    alert("Algorithm not implemented.");
-            }
-            methodsElement.scrollTop = methodsElement.scrollHeight; // Scroll to the bottom of the methodsElement
+            handleAlgorithmClick(algorithm, edgesRaw, directed, displayName, methodsElement);
         });
-
         methodsDiv.appendChild(button);
     });
 
@@ -928,7 +883,6 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
         e.preventDefault();
         let startY = e.clientY;
         let startHeight = methodsElement.offsetHeight;
-        let startTop = methodsElement.offsetTop;
 
         function onMouseMove(event) {
             let newHeight = startHeight - (event.clientY - startY);
@@ -1350,8 +1304,8 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                                 }
 
                                 // Update positions
-                                setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
-                                setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+                                setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
+                                setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId);
 
                                 menu.remove();
                             }
@@ -1395,7 +1349,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
                     // MERGE: Combine enter and update selections
                     label = labelEnter.merge(labelSelection);
-                    setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+                    setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
                 }
             }
         })
@@ -1470,7 +1424,6 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                 if (newHeight > minHeight && newHeight < maxHeight) {
                     container.style.height = newHeight + 'px';
                     container.style.top = newTop + 'px';
-                    setMethodsElementSize(container, methodsElement);
                 }
             }
 
@@ -1497,7 +1450,6 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
             container.style.width = window.innerWidth + 'px';
             container.style.height = window.innerHeight + 'px';
             focusAndCenterContainer(container, false, true)
-            setMethodsElementSize(container, methodsElement);
         } else {
             isFullScreen = false;
             container.style.width = oldWidth;
@@ -1614,7 +1566,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
         let edgesRawString = stringifyEdges(edgesRaw);
         addGraph(edgesRawString, nodes, `${displayName} copy`);
         graphOptions.style.display = "none";
-    })
+    });
 
     const deleteThisGraph = document.createElement('button'); // Delete this graph
     deleteThisGraph.className = 'deleteCurrentGraph';
@@ -1797,7 +1749,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
             new Set(edges.flatMap(edge => [edge.source, edge.target]))
         ).map(id => ({ id }));
 
-        const vertexData = vertexInput.value.trim().toUpperCase();
+        const vertexData = graphInputVertices.value.trim().toUpperCase();
         const vertices = vertexData.split(',').map(v => v.trim()).filter(v => v !== "");
 
         if (vertices.length > 0) {
@@ -1935,8 +1887,8 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                         d.bidirectional = false;
                     }
                 }
-                setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
-                setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+                setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
+                setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId);
             };
             menu.appendChild(deleteBtn);
 
@@ -2299,8 +2251,8 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                 }
 
                 // Update positions
-                setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
-                setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+                setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
+                setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId);
 
                 menu.remove();
             }
@@ -2354,8 +2306,8 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
     // Update positions on simulation
     simulation.on('tick', () => {
-        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
-        setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
+        setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId);
     });
 
     /* Auto-rearrange nodes functionality */
@@ -2365,8 +2317,8 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
         node.attr('cx', d => d.x).attr('cy', d => d.y);
 
         // Update link positions
-        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
-        setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId, edgeLayer);
+        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
+        setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId);
         adjustViewBox(svg, nodes, grid);
         drawGrid(svg, grid);
 

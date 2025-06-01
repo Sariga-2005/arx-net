@@ -20,7 +20,7 @@ cgm.addEventListener('click', function () {
     } else {
         this.getElementsByTagName('img')[0].src = 'images/sidebaropen.png';
         graphGenMenu.style.display = 'none';
-        outliner.style.height = '85vh';
+        outliner.style.height = '82vh';
     }
 })
 

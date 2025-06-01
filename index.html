@@ -7,7 +7,6 @@
     <title>Arx Net</title>
     <link rel='stylesheet' href='styles.css'>
     <script src='D3.js'></script> <!--D3 library contains the necessary elements to generate and manipulate graphs -->
-    <!-- <script src='graphMethods.js'></script> Contains implementation of commonly used graph methods -->
 </head>
 
 <body>
@@ -20,35 +19,35 @@
             </h1>
             <div class='sourceInput' id='sourceInput'>
                 <input type='text' id='graphName' placeholder='Graph name (Can be left blank)'> <br>
-                <input type='text' id='vertices' placeholder='E.G., A, B, C' style="text-transform: uppercase;"> <br>
+                <input type='text' id='vertices' placeholder='E.G., A, B, C' style='text-transform: uppercase;'> <br>
                 <input type='text' id='edges' placeholder='E.G., AB5, 12-3.14, (B_C_-2.71)' autocomplete='off'
                     spellcheck='false'
                     value='AB7, AA6, BA9, AC5, AD3, BC4, BE6, CD2, CF8, DE5, DG7, EE2, EF3, EH4, FG6, FI7, GH2, HI5, HJ9, IJ4'
-                    style="text-transform: uppercase;">
+                    style='text-transform: uppercase;'>
                 <br>
-                <input type='checkbox' id='directed' onchange="updateMinMax()" checked>Directed <br>
+                <input type='checkbox' id='directed' onchange='updateMinMax()' checked>Directed <br>
                 <input type='checkbox' id='weighted' checked>Weighted
                 <br>
                 <button id='generateGraph' onclick='addGraph()'>Generate Graph</button>
-                <div class="input-row">
-                    <label for="numNodes">Vertex count:</label>
-                    <input type="text" id="numNodes" placeholder="Number of vertices" value="10"
-                        onchange="updateMinMax()">
+                <div class='input-row'>
+                    <label for='numNodes'>Vertex count:</label>
+                    <input type='text' id='numNodes' placeholder='Number of vertices' value='10'
+                        onchange='updateMinMax()'>
 
-                    <label for="numEdges">Edge count:</label>
-                    <input type="text" id="numEdges" placeholder="Number of edges" value="34">
+                    <label for='numEdges'>Edge count:</label>
+                    <input type='text' id='numEdges' placeholder='Number of edges' value='34'>
                 </div>
 
-                <div class="input-row">
-                    <label for="minWeight">Min weight:</label>
-                    <input type="text" id="minWeight" placeholder="Minimum weight" value="1" onchange="updateMinMax()">
+                <div class='input-row'>
+                    <label for='minWeight'>Min weight:</label>
+                    <input type='text' id='minWeight' placeholder='Minimum weight' value='1' onchange='updateMinMax()'>
 
-                    <label for="maxWeight">Max weight:</label>
-                    <input type="text" id="maxWeight" placeholder="Maximum weight" value="20">
+                    <label for='maxWeight'>Max weight:</label>
+                    <input type='text' id='maxWeight' placeholder='Maximum weight' value='20'>
                 </div>
                 <input type='checkbox' id='connectedGraph'>Connected<br>
-                <input type='checkbox' id='selfLoops' onchange="updateMinMax()">Self loops (Multigraph) <br>
-                <input type='checkbox' id='duplicateEdges' onchange="updateMinMax()">Duplicate edges (Multigraph)
+                <input type='checkbox' id='selfLoops' onchange='updateMinMax()'>Self loops (Multigraph) <br>
+                <input type='checkbox' id='duplicateEdges' onchange='updateMinMax()'>Duplicate edges (Multigraph)
                 <br>
                 <p id='minMaxRec'>
                     Max edge count for current vertex count: <b id='maxRec' style='color: #ffc66d;'> 90 </b>
@@ -58,7 +57,7 @@
         </div>
         <hr style='color: #ccc;'>
         <div class='outliner'>
-            <b style="margin-right: 20px; font-size: larger;">Graphs</b>
+            <b style='margin-right: 20px; font-size: larger;'>Graphs</b>
             <button id='view4' title='Scale graphs to fit 4 graphs in the space'>
                 <img src='images/disable4g.png'>
             </button>
@@ -67,7 +66,7 @@
             </button>
             <button id='snap'
                 title='Snap to increments when moving graph windows. Works only when 4 graph view or 9 graph view is enabled.'>
-                <img src="images/disablesnap.png">
+                <img src='images/disablesnap.png'>
             </button>
             <button id='showHideAll' title='Minimize/Maximize all graphs'>
                 <img src='images/show.png'>
@@ -78,36 +77,37 @@
         </div>
     </div>
     <div class='aboutDiv' id='aboutDiv'>
-        <font style="color: #ffc66d; font-weight: bold; font-size:x-large;">Arx Net guide</font>
+        <span style='color: #ffc66d; font-weight: bold; font-size:x-large;'>Arx Net guide</span> <br>
+        © 2025 arx-net
         <p>
             This section provides guidance on how to use the Arx Net application effectively. To know about how the
             application works, please refer to the documentation.
         </p>
 
-        <font style="color: #ffc66d; font-weight: bold;">Graph Generation:</font>
+        <span style='color: #ffc66d; font-weight: bold;'>Graph Generation:</span>
         <ul>
             <li>Enter the graph name and edges in the specified format.</li>
             <li>The edges can be directed or undirected, and weighted or unweighted.</li>
-            <li>Click on "Generate Graph" to create the graph.</li>
-            <li>Alternatively, click on "Generate random graph" to generate a random graph with the specified
+            <li>Click on 'Generate Graph' to create the graph.</li>
+            <li>Alternatively, click on 'Generate random graph' to generate a random graph with the specified
                 number of nodes and edges.</li>
         </ul>
 
 
-        <font style="color: #ffc66d; font-weight: bold;">Outliner controls:</font>
+        <span style='color: #ffc66d; font-weight: bold;'>Outliner controls:</span>
         <ul>
             <li>The outliner displays all the generated graphs.</li>
             <li>You can minimize, maximize, or clear all graphs using the provided buttons.</li>
-            <li>The "View 4" and "View 9" buttons allow you to scale the graphs to fit 4 or 9 graphs in the
+            <li>The 'View 4' and 'View 9' buttons allow you to scale the graphs to fit 4 or 9 graphs in the
                 available space, respectively.</li>
-            <li>The "Snap" button enables snapping of graph windows to increments when moving them.</li>
+            <li>The 'Snap' button enables snapping of graph windows to increments when moving them.</li>
             <li>You can double click on the graph name to edit it, but each graph must have a unique name.</li>
-            <li>Click on the "Focus" button to focus on the graph window, which will bring it to the front and
+            <li>Click on the 'Focus' button to focus on the graph window, which will bring it to the front and
                 highlight it.</li>
         </ul>
 
 
-        <font style="color: #ffc66d; font-weight: bold;">Graph window controls:</font>
+        <span style='color: #ffc66d; font-weight: bold;'>Graph window controls:</span>
         <ul>
             <li>Use the Left mouse button to interact with the vertices and edges.</li>
             <li>Use the middle mouse button (or Ctrl + LMB) to pan the graph view.</li>
@@ -124,8 +124,9 @@
     const graphGenerator = document.querySelector('.graphGenerator');
     const containerAll = document.querySelector('.container');
 </script>
-<script src='BodyScript.js'></script>
-<script src="algorithms.js"></script>
-<script src='GraphGen.js'></script>
+<script src='non-graph.js'></script>
+<script src='graph-layout-manager.js'></script>
+<script src='algorithms.js'></script>
+<script src='graph-window-renderer.js'></script>
 
 </html>

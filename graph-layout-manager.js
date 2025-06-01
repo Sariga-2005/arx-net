@@ -13,7 +13,7 @@ let view9gen = false;
 
 view4.addEventListener('click', function () {
     const img = view4.getElementsByTagName('img')[0];
-    if (img.src.endsWith('enable4g.png')) { // Button is enabled here, actions to disable
+    if (view4gen) { // Button is enabled here, actions to disable
         img.src = 'images/disable4g.png';
         view4gen = false;
     } else { // Button is disabled here, actions to enable
@@ -33,7 +33,7 @@ view4.addEventListener('click', function () {
 
 view9.addEventListener('click', function () {
     const img = view9.getElementsByTagName('img')[0];
-    if (img.src.endsWith('enable9g.png')) { // Button is enabled here, actions to disable
+    if (view9gen) { // Button is enabled here, actions to disable
         img.src = 'images/disable9g.png';
         view9gen = false;
     } else { // Button is disabled here, actions to enable
@@ -90,30 +90,10 @@ showHideAll.addEventListener('click', () => {
 // Clear All functionality
 const clearAll = document.getElementById('clearAll')
 clearAll.addEventListener('click', () => {
-    if (confirm("Are you sure want to delete all graphs? This action cannot be undone.")) {
+    if (confirm('Are you sure want to delete all graphs? This action cannot be undone.')) {
         const allGraphs = document.getElementsByClassName('deleteCurrentGraph')
         Array.from(allGraphs).forEach(itemGraph => {
             itemGraph.click();
-        })
+        });
     }
-})
-
-/* Global variables in this file:
-    * view4gen: Boolean to check if 4G view is enabled
-    * view9gen: Boolean to check if 9G view is enabled
-    * snapping: Boolean to check if snapping is enabled
-    * show: Boolean to check if graphs are shown or hidden
-    * aboutBtn: Button to toggle the about section
-    * aboutDiv: Div containing the about section
-    * showHideAll: Button to show/hide all graphs
-    * showHideAllGraphs: Boolean to check if all graphs are shown or hidden
-    * clearAll: Button to clear all graphs
-    * selfLoops = Checkbox for self-loops
-    * duplicateEdges = Checkbox for duplicate edges
-    * isDirected = Checkbox for directed graphs
-    * connected = Checkbox for connected graphs
-    * maxWeight = Input field for maximum weight
-    * cgm: Button to toggle the graph generation menu
-    * graphGenMenu: Div containing the graph generation menu
-    * vertexInput: Input field for vertices
-*/
+});
