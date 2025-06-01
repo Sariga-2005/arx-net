@@ -198,8 +198,11 @@ function stringifyEdges(edgesRaw) {
 
 const graphInputField = document.getElementById('edges');
 
-// This function currently supports generating multigraphs as well, but that functionality has been disabled. Rework
-function generateRandomGraphString(vertexCount, edgeCount, options = {}) {
+// This function currently supports generating multigraphs as well, but that functionality has been disabled
+const connected = document.getElementById('connectedGraph')
+const maxWeight = document.getElementById('maxWeight')
+
+function generateRandomGraph(vertexCount, edgeCount, options = {}) {
     const {
         allowDuplicates = duplicateEdges.checked,
         ensureConnected = connected.checked,
@@ -330,12 +333,14 @@ function generateRandomGraphString(vertexCount, edgeCount, options = {}) {
     addGraph(stringifyEdges(edgeList));
 }
 
+const generateRandomButton = document.getElementById('generateRandomGraph');
+const vertexInput = document.getElementById('numNodes');
+const edgeInput = document.getElementById('numEdges');
 
-const generateRandomButton = document.getElementById('generateRandomGraph')
 generateRandomButton.addEventListener('click', () => {
-    const vertexCount = document.getElementById('numNodes').value
-    const edgeCount = document.getElementById('numEdges').value
-    generateRandomGraphString(vertexCount, edgeCount)
+    const vertexCount = vertexInput.value;
+    const edgeCount = edgeInput.value;
+    generateRandomGraph(vertexCount, edgeCount);
 })
 
 /* Functions to draw grid */
