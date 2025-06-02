@@ -1,6 +1,7 @@
 /* Global Styles */
 * {
     box-sizing: border-box;
+    font-family: sans-serif;
     text-decoration: none;
     /* Don't use styles on anything unless specifically mentioned */
     outline: none;
@@ -52,7 +53,7 @@ body {
     text-align: left;
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 /* Scrollbar */
@@ -115,7 +116,7 @@ input[type="checkbox"]:checked::before {
     /* Checkmark style */
     height: 8px;
     border: solid var(--checkmark-color);
-    border-width: 0 2px 2px 0;
+    border-width: 0 3px 3px 0;
 }
 
 /* Images */
@@ -209,10 +210,10 @@ img {
 .outliner {
     margin-top: 15px;
     display: block;
-    height: 15vh;
+    height: 25vh;
     width: 100%;
     padding: 0px 20px 20px 20px;
-    overflow-y: scroll;
+    overflow-y: auto;
     box-sizing: border-box;
 }
 
@@ -244,7 +245,7 @@ h1 button:hover {
 /* Graph generator menu within outliner */
 .graphGenerator {
     height: fit-content;
-    margin: 0px 0px 20px 20px;
+    margin: 0px 0px 0px 20px;
 }
 
 
@@ -303,7 +304,7 @@ h1 button:hover {
 /* This is where the graph svg element is rendered */
 .graphContainer {
     position: absolute;
-    background-color: #ff0000;
+    background-color: var(--bg-primary);
     /* If this background color is seen, then there is an error in positioning */
     border: 2px solid var(--bg-secondary);
     box-shadow: 0px 0px 16px rgba(0, 0, 0, 0.5);

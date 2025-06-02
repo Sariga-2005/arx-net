@@ -280,7 +280,7 @@ function showEdgeContextMenu(event, d, svg, edgeLabel, edges, edgesRaw, node, la
     document.body.appendChild(menu);
 }
 
-function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core function will all functionalities
+function addGraph(edgesInput = null, nodes = null, inputName = null, directed = null, weighted = null) { // Core function will all functionalities
     // Common arrow head ID for this graph
     const arrowId = `arrowHead${graphCount}`; // Creating separate arrow heads for each graph, while also grouping the similar ones
     graphCount++;
@@ -303,8 +303,8 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     // Graph value details
     let edgesInputValue = document.getElementById('edges').value;
     edgesInput = edgesInput === null ? edgesInputValue.toUpperCase() : edgesInput; // Use the provided edgesInput or the value from the input field
-    const directed = document.getElementById('directed').checked;
-    const weighted = document.getElementById('weighted').checked;
+    directed = directed ?? document.getElementById('directed').checked;
+    weighted = weighted ?? document.getElementById('weighted').checked;
 
     // container is the graph window, and it contains the graph and svg functionalities.
     const container = document.createElement('div');
@@ -410,7 +410,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
         button.title = algorithm.title;
 
         button.addEventListener('click', () => {
-            handleAlgorithmClick(algorithm, edgesRaw, directed, displayName, methodsElement);
+            handleAlgorithmClick(algorithm, edgesRaw, nodes, directed, weighted, nameInput.value, methodsElement);
         });
         methodsDiv.appendChild(button);
     });
@@ -719,86 +719,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                                                 handleEdgeMouseOut(this, edgeColor, directed, svgElement);
                                             })
                                             .on('contextmenu', function (event, d) {
-                                                event.preventDefault();
-                                                event.stopPropagation();
-
-                                                // Create context menu
-                                                const menu = document.createElement('div');
-                                                menu.className = 'floating-menu';
-                                                menu.style.position = 'fixed';
-                                                menu.style.left = `${event.clientX}px`;
-                                                menu.style.top = `${event.clientY}px`;
-
-                                                // Delete link option
-                                                // Delete edge button
-                                                const deleteBtn = document.createElement('button');
-                                                deleteBtn.textContent = 'Delete this edge';
-                                                deleteBtn.onclick = () => {
-                                                    // Remove the edge from the edges array
-                                                    const idx = edges.indexOf(d);
-                                                    if (idx !== -1) {
-                                                        edges.splice(idx, 1);
-                                                        edgesRaw.splice(idx, 1);
-                                                    }
-                                                    // Remove from raw edges as well if needed
-                                                    const rawIdx = edgesRaw.indexOf(d);
-                                                    if (rawIdx !== -1) {
-                                                        edgesRaw.splice(rawIdx, 1);
-                                                    }
-                                                    // Remove the link visually
-                                                    d3.select(this).remove();
-                                                    // Remove edge label if present
-                                                    if (edgeLabel) {
-                                                        edgeLabel.filter(e => e === d).remove();
-                                                    }
-                                                    d3.select(svgElement)
-                                                        .selectAll('.link2')
-                                                        .filter(e => e === d)
-                                                        .remove();
-                                                    // Remove context menu
-                                                    menu.remove();
-                                                };
-                                                menu.appendChild(deleteBtn);
-
-                                                // Change edge weight button
-                                                const changeWeightBtn = document.createElement('button');
-                                                changeWeightBtn.textContent = 'Change edge weight';
-                                                changeWeightBtn.onclick = () => {
-                                                    let newWeight = parseFloat(prompt('Enter new weight for this edge:', d.weight));
-                                                    if (newWeight !== null) {
-                                                        if (typeof newWeight !== 'number' || isNaN(newWeight)) {
-                                                            menu.remove();
-                                                            alert('Weight must be a valid number.');
-                                                            return;
-                                                        }
-                                                        d.weight = newWeight;
-                                                        // Update edgeLabel if present
-                                                        if (edgeLabel) {
-                                                            edgeLabel
-                                                                .filter(e => e === d)
-                                                                .text(newWeight);
-                                                        }
-                                                        // Also update in edgesRaw if possible
-                                                        const raw = edgesRaw.find(e =>
-                                                            e.source === (d.source.id || d.source) &&
-                                                            e.target === (d.target.id || d.target)
-                                                        );
-                                                        if (raw) raw.weight = newWeight;
-                                                    }
-                                                    menu.remove();
-                                                };
-                                                menu.appendChild(changeWeightBtn);
-
-                                                // Remove menu on click elsewhere
-                                                function removeMenu(e) {
-                                                    if (!menu.contains(e.target)) {
-                                                        menu.remove();
-                                                        document.removeEventListener('mousedown', removeMenu);
-                                                    }
-                                                }
-                                                document.addEventListener('mousedown', removeMenu, { once: true });
-
-                                                document.body.appendChild(menu);
+                                                showEdgeContextMenu(event, d, svg, edgeLabel, edges, edgesRaw, node, label, directed, weighted, arrowId, link, link2);
                                             }),
                                         update => update,
                                         exit => exit.remove()
@@ -904,6 +825,13 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
             }
         })
 
+        addMenuItem('Save as PNG', 'Save this graph as a PNG image', () => {
+            saveSvgAsPng(svgElement, `${nameInput.value}.png`);
+        });
+        addMenuItem('Save as transparent PNG', 'Save this graph as a PNG image with a transparent background', () => {
+            saveSvgAsPng(svgElement, `${nameInput.value}.png`, true);
+        });
+
         // Remove menu on click elsewhere
         document.addEventListener('mousedown', function handler(e) {
             if (!menu.contains(e.target)) {
@@ -920,7 +848,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
     /* Container elements' functionality */
     /* Drag functionality */
     graphHeader.addEventListener('mousedown', (e) => {
-        setContainerPosition(e, container);
+        setContainerPosition(e, container, fullScreenButton);
     });
     /* End of drag functionality */
 
@@ -1020,7 +948,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
 
     duplicateGraph.addEventListener('click', () => {
         let edgesRawString = stringifyEdges(edgesRaw);
-        addGraph(edgesRawString, nodes, `${displayName} copy`);
+        addGraph(edgesRawString, nodes, `${nameInput.value} copy`);
         graphOptions.style.display = "none";
     });
 
@@ -1200,11 +1128,11 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
         })
         .on('mouseout', function () {
             handleEdgeMouseOut(this, edgeColor, directed, svgElement);
-        })        
+        })
         .on('contextmenu', function (event, d) {
             showEdgeContextMenu(event, d, svg, edgeLabel, edges, edgesRaw, node, label, directed, weighted, arrowId, link, link2);
         });
-        
+
 
     // Buffer size for edge hover
     let link2 = edgeBufferLayer.selectAll('.link2')
@@ -1353,7 +1281,7 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                             })
                             .on('mouseout', function () {
                                 handleEdgeMouseOut(this, edgeColor, directed, svgElement);
-                            })        
+                            })
                             .on('contextmenu', function (event, d) {
                                 showEdgeContextMenu(event, d, svg, edgeLabel, edges, edgesRaw, node, label, directed, weighted, arrowId, link, link2);
                             }),

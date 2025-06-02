@@ -13,6 +13,7 @@ function focusAndCenterContainer(container, resize = true, fromCenter = false, o
     if (resize) {
         container.style.height = '50%';
         container.style.width = '37.5%';
+        isFullScreen = false; // Reset full screen state
     }
     const offsetX = container.offsetWidth / 2;
     const offsetY = container.offsetHeight / 2;

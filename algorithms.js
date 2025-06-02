@@ -98,7 +98,7 @@ class PriorityQueue {
     }
 }
 
-function dijkstra(edges, start = prompt("Enter start vertex"), isDirected = true) {
+function dijkstra(edges, start = prompt("Enter start vertex"), nodes, isDirected = true) {
     if (!vertexExists(edges, start, isDirected)) {
         alert("Vertex " + start + " not found.");
         return null;
@@ -113,6 +113,12 @@ function dijkstra(edges, start = prompt("Enter start vertex"), isDirected = true
             if (!graph[target]) graph[target] = [];
             graph[target].push({ target: source, weight });
 
+        }
+    }
+
+    for (const node of nodes) {
+        if (!graph[node.id]) {
+            graph[node.id] = [];
         }
     }
 
@@ -164,7 +170,7 @@ function dijkstra(edges, start = prompt("Enter start vertex"), isDirected = true
 
 }
 
-function floydWarshall(edges) {
+function floydWarshall(edges, directed) {
     const graph = {};
     const nodes = new Set();
 
@@ -172,7 +178,7 @@ function floydWarshall(edges) {
         if (!graph[source]) graph[source] = {};
         if (!graph[target]) graph[target] = {};
         graph[source][target] = weight;
-        graph[target][source] = weight; // For undirected graphs
+        if (!directed) graph[target][source] = weight; // For undirected graphs
         nodes.add(source);
         nodes.add(target);
     }
@@ -242,7 +248,7 @@ function floydWarshall(edges) {
 `;
 }
 
-function bellmanFord(edges, start = prompt("Enter start vertex"), isDirected) {
+function bellmanFord(edges, start = prompt("Enter start vertex"), nodes, isDirected) {
     if (!vertexExists(edges, start, isDirected)) {
         alert("Vertex " + start + " not found.");
         return null;
@@ -254,7 +260,14 @@ function bellmanFord(edges, start = prompt("Enter start vertex"), isDirected) {
         // For undirected graphs, also include reverse:
         if (!isDirected) {
             if (!graph[target]) graph[target] = [];
-            graph[target].push(source);
+            graph[target].push({ target: source, weight });
+
+        }
+    }
+
+    for (const node of nodes) {
+        if (!graph[node.id]) {
+            graph[node.id] = [];
         }
     }
 
@@ -276,11 +289,11 @@ function bellmanFord(edges, start = prompt("Enter start vertex"), isDirected) {
         }
     }
     for (const { source, target, weight } of edges) {
-    if (distances[source] + weight < distances[target]) {
-        alert("Graph contains a negative weight cycle.");
-        return null;
+        if (distances[source] + weight < distances[target]) {
+            alert("Graph contains a negative weight cycle.");
+            return null;
+        }
     }
-}
 
 
     return `
@@ -305,51 +318,78 @@ function bellmanFord(edges, start = prompt("Enter start vertex"), isDirected) {
 `;
 }
 
-function mst(edges) {
+function mst(edges, weighted, graphName) {
     const graph = {};
+    if (!weighted) {
+        alert("Minimum Spanning Tree requires weighted edges, assuming all weights are 1.");
+    }
     for (const { source, target, weight } of edges) {
         if (!graph[source]) graph[source] = [];
         if (!graph[target]) graph[target] = [];
-        graph[source].push({ target, weight });
-        graph[target].push({ source, weight }); // undirected
+        graph[source].push({ target, weight: weight || 1 });
+        graph[target].push({ target: source, weight: weight || 1 }); // undirected
     }
 
-    const mstEdges = [];
+    class PriorityQueue {
+        constructor() {
+            this.items = [];
+        }
+
+        enqueue(element, priority) {
+            this.items.push({ element, priority });
+            this.items.sort((a, b) => a.priority - b.priority);
+        }
+
+        dequeue() {
+            return this.items.shift();
+        }
+
+        isEmpty() {
+            return this.items.length === 0;
+        }
+    }
+
     const visited = new Set();
-    const queue = new PriorityQueue();
+    const pq = new PriorityQueue();
+    const mstEdges = [];
 
     const startNode = Object.keys(graph)[0];
-    visited.add(startNode);
-
-    for (const { target, weight } of graph[startNode]) {
-        queue.enqueue({ source: startNode, target, weight }, weight);
+    if (!startNode) {
+        console.log("Graph is empty.");
+        return;
     }
 
-    while (!queue.isEmpty()) {
-        const { element: { source, target, weight } } = queue.dequeue();
+    visited.add(startNode);
+    for (const neighbor of graph[startNode]) {
+        pq.enqueue({ from: startNode, to: neighbor.target }, neighbor.weight);
+    }
 
-        if (!visited.has(target)) {
-            visited.add(target);
-            mstEdges.push({ from: source, to: target, weight }); // renamed to `from`, `to` for clarity
+    while (!pq.isEmpty()) {
+        const { element, priority: weight } = pq.dequeue();
+        const { from, to } = element;
 
-            for (const { target: neighborTarget, weight: neighborWeight } of graph[target]) {
-                if (!visited.has(neighborTarget)) {
-                    queue.enqueue({ source: target, target: neighborTarget, weight: neighborWeight }, neighborWeight);
+        if (visited.has(to)) continue;
+        visited.add(to);
+        mstEdges.push({ source: from, target: to, weight });
+
+        const neighbors = graph[to];
+        if (Array.isArray(neighbors)) {
+            for (const neighbor of neighbors) {
+                if (!visited.has(neighbor.target)) {
+                    pq.enqueue({ from: to, to: neighbor.target }, neighbor.weight);
                 }
             }
         }
     }
 
-    printMST(mstEdges);  // 🔥 Print the result directly
-    return mstEdges;
-}
+    let mstResult = '';
+    console.log("Minimum Spanning Tree:");
+    for (const edge of mstEdges) {
+        mstResult += `(${edge.source}_${edge.target}_${edge.weight}),`
+    }
+    mstResult = mstResult.slice(0, -1); // Remove trailing comma
 
-// ✅ Print function
-function printMST(mstEdges) {
-    console.log("Minimum Spanning Tree Edges:");
-    mstEdges.forEach(edge => {
-        console.log(`${edge.from} — ${edge.to} [Weight: ${edge.weight}]`);
-    });
+    addGraph(mstResult, null, `${graphName} MST`, false, false);
 }
 
 function topologicalSort(edges) {
@@ -437,7 +477,13 @@ function StronglyConnectedComponents(edges) {
             sccs.push(component);
         }
     }
-    return sccs;
+
+    let sccResult = '';
+    for (const component of sccs) {
+        sccResult += `{${component.join(',')}}, `;
+    }
+    sccResult = sccResult.slice(0, -2); // Remove trailing comma and space
+    return sccResult;
 }
 
 function BiconnectedComponents(edges) {
@@ -493,5 +539,15 @@ function BiconnectedComponents(edges) {
         }
     }
 
-    return bcc;
+    let bccResult = '';
+    for (let i = 0; i < bcc.length; i++) {
+        bccResult += `{`;
+        for (let j = 0; j < bcc[i].length; j++) {
+            bccResult += `(${bcc[i][j]}), `;
+        }
+        bccResult = bccResult.slice(0, -2); 
+        bccResult += '}, ';
+    }
+    bccResult = bccResult.slice(0, -2);
+    return bccResult;
 }

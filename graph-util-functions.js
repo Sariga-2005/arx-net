@@ -8,6 +8,12 @@ function filterAlgorithms(algorithms, directed, weighted) {
                 return false;
             }
         }
+        if (directed) {
+            if (algorithm.name === 'mst') {
+                // MST is not applicable for directed graphs
+                return false;
+            }
+        }
         if (!weighted) {
             // If the graph is unweighted, exclude algorithms that require weighted graphs
             if (algorithm.name === 'dijkstra' || algorithm.name === 'floydWarshall' || algorithm.name === 'bellmanFord') {
@@ -19,7 +25,7 @@ function filterAlgorithms(algorithms, directed, weighted) {
     return applicableAlgorithms;
 }
 
-function handleAlgorithmClick(algorithm, edgesRaw, directed, displayName, methodsElement) {
+function handleAlgorithmClick(algorithm, edgesRaw, nodes, directed, weighted, displayName, methodsElement) {
     const resultContainer = document.createElement('p');
     let result = null;
     let label = '';
@@ -46,25 +52,26 @@ function handleAlgorithmClick(algorithm, edgesRaw, directed, displayName, method
         case 'dijkstra': {
             const source = getSource("Enter source vertex");
             if (!source) break;
-            result = dijkstra(edgesRaw, source, directed);
-            label = `Dijkstra's through ${displayName} with ${source} as source node: <br>`;
+            result = dijkstra(edgesRaw, source, nodes, directed);
+            label = `Dijkstra's through ${displayName} with ${source} as source node: <br> <br>`;
             break;
         }
         case 'floydWarshall':
-            result = floydWarshall(edgesRaw);
+            result = floydWarshall(edgesRaw, nodes, directed);
             label = `Floyd Warshall through ${displayName}: `;
             break;
 
         case 'bellmanFord': {
             const source = getSource("Enter source vertex");
             if (!source) break;
-            result = bellmanFord(edgesRaw, source, directed);
-            label = `Bellman Ford through ${displayName} with ${source} as source node: `;
+            result = bellmanFord(edgesRaw, source, nodes, directed);
+            label = `Bellman Ford through ${displayName} with ${source} as source node: <br> <br>`;
             break;
         }
         case 'mst':
-            result = mst(edgesRaw);
-            label = `MST through ${displayName}: `;
+            mst(edgesRaw, weighted, displayName);
+            result = ''; // MST function handles its own output
+            label = `Generated MST through ${displayName}: `;
             break;
 
         case 'topologicalSort':
@@ -88,7 +95,7 @@ function handleAlgorithmClick(algorithm, edgesRaw, directed, displayName, method
     }
 
     if (result !== null) {
-        resultContainer.innerHTML = `<span style="color: #ffc66d;">${label}</span> ${result}`;
+        resultContainer.innerHTML = `<span style="color: #ffc66d;">${label}</span> ${result} <br>`;
         methodsElement.appendChild(resultContainer);
         methodsElement.style.display = 'block';
         methodsElement.scrollTop = methodsElement.scrollHeight;
