@@ -176,62 +176,108 @@ function dragEnded(event, d, simulation, useForce, thisNode) {
 }
 /* End of Drag Functions */
 
-function handleTopResizeMouseDown(event, methodsElement, container) {
+function handleEdgeMouseOver(pathElement, edgeHoverColor, directed, svgElement) {
+    d3.select(pathElement).attr('stroke', edgeHoverColor);
+
+    if (directed) {
+        const markerUrl = d3.select(pathElement).attr('marker-end');
+        const match = markerUrl?.match(/url\(#([^)]+)\)/);
+        if (match) {
+            d3.select(svgElement)
+                .select(`#${match[1]}`)
+                .select('path')
+                .attr('fill', edgeHoverColor);
+        }
+    }
+}
+
+function handleEdgeMouseOut(pathElement, edgeColor, directed, svgElement) {
+    d3.select(pathElement).attr('stroke', edgeColor);
+
+    if (directed) {
+        const markerUrl = d3.select(pathElement).attr('marker-end');
+        const match = markerUrl?.match(/url\(#([^)]+)\)/);
+        if (match) {
+            d3.select(svgElement)
+                .select(`#${match[1]}`)
+                .select('path')
+                .attr('fill', edgeColor);
+        }
+    }
+}
+
+function showEdgeContextMenu(event, d, svg, edgeLabel, edges, edgesRaw, node, label, directed, weighted, arrowId, link, link2) {
     event.preventDefault();
+    event.stopPropagation();
 
-    const startY = event.clientY;
-    const startHeight = methodsElement.offsetHeight;
+    const menu = document.createElement('div');
+    menu.className = 'floating-menu';
+    menu.style.position = 'fixed';
+    menu.style.left = `${event.clientX}px`;
+    menu.style.top = `${event.clientY}px`;
 
-    function onTopResizeMouseMove(e) {
-        performTopResize(e, startY, startHeight, methodsElement, container);
-    }
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete this edge';
+    deleteBtn.onclick = () => {
+        const idx = edges.indexOf(d);
+        if (idx !== -1) {
+            edges.splice(idx, 1);
+            edgesRaw.splice(idx, 1);
+        }
+        // Remove from raw edges as well if needed
+        const rawIdx = edgesRaw.indexOf(d);
+        if (rawIdx !== -1) {
+            edgesRaw.splice(rawIdx, 1);
+        }
 
-    function onTopResizeMouseUp() {
-        document.removeEventListener('mousemove', onTopResizeMouseMove);
-    }
+        svg.selectAll('.link').filter(e => e === d).remove();
+        if (edgeLabel) edgeLabel.filter(e => e === d).remove();
+        svg.selectAll('.link2').filter(e => e === d).remove();
 
-    document.addEventListener('mousemove', onTopResizeMouseMove);
-    document.addEventListener('mouseup', onTopResizeMouseUp, { once: true });
-}
+        if (d.bidirectional) {
+            const reverse = edges.find(e =>
+                (e.source.id || e.source) === (d.target.id || d.target) &&
+                (e.target.id || e.target) === (d.source.id || d.source)
+            );
+            if (reverse) {
+                reverse.bidirectional = false;
+                d.bidirectional = false;
+            }
+        }
 
-function performTopResize(event, startY, startHeight, methodsElement, container) {
-    const newHeight = startHeight - (event.clientY - startY);
-    const minHeight = container.offsetHeight * 0.2;
-    const maxHeight = container.offsetHeight * 0.9;
+        setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
+        setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId);
 
-    if (newHeight >= minHeight && newHeight <= maxHeight) {
-        methodsElement.style.height = `${newHeight}px`;
-    }
-}
+        menu.remove();
+    };
+    menu.appendChild(deleteBtn);
 
-function toggleContainerFullScreen(container, focusAndCenterFn) {
-    if (!isFullScreen) {
-        saveOldContainerDimensions(container);
-        enterFullScreen(container);
-        focusAndCenterFn(container, false, true);
-    } else {
-        exitFullScreen(container);
-        focusAndCenterFn(container, false, null, oldContainerLeft, oldContainerTop);
-    }
-}
+    const changeWeightBtn = document.createElement('button');
+    changeWeightBtn.textContent = 'Change edge weight';
+    changeWeightBtn.onclick = () => {
+        let newWeight = parseFloat(prompt('Enter new weight for this edge:', d.weight));
+        if (newWeight == null || isNaN(newWeight)) {
+            alert('Weight must be a valid number.');
+        } else {
+            d.weight = newWeight;
+            if (edgeLabel) edgeLabel.filter(e => e === d).text(newWeight);
+            const raw = edgesRaw.find(e =>
+                e.source === (d.source.id || d.source) &&
+                e.target === (d.target.id || d.target)
+            );
+            if (raw) raw.weight = newWeight;
+        }
+        menu.remove();
+    };
+    menu.appendChild(changeWeightBtn);
 
-function saveOldContainerDimensions(container) {
-    oldContainerWidth = container.style.width;
-    oldContainerHeight = container.style.height;
-    oldContainerLeft = container.offsetLeft;
-    oldContainerTop = container.offsetTop;
-    isFullScreen = true;
-}
+    document.addEventListener('mousedown', function removeMenu(e) {
+        if (!menu.contains(e.target)) {
+            menu.remove();
+        }
+    }, { once: true });
 
-function enterFullScreen(container) {
-    container.style.width = `${window.innerWidth}px`;
-    container.style.height = `${window.innerHeight}px`;
-}
-
-function exitFullScreen(container) {
-    container.style.width = oldContainerWidth;
-    container.style.height = oldContainerHeight;
-    isFullScreen = false;
+    document.body.appendChild(menu);
 }
 
 function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core function will all functionalities
@@ -583,7 +629,6 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                             menu.style.position = 'fixed';
                             menu.style.left = `${event.clientX}px`;
                             menu.style.top = `${event.clientY}px`;
-                            menu.style.zIndex = 10000;
 
                             // Delete node option
                             const deleteBtn = document.createElement('button');
@@ -668,42 +713,10 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                                             .attr('stroke', edgeColor)
                                             .attr('stroke-width', 1.5)
                                             .on('mouseover', function () {
-                                                d3.select(this).attr('stroke', edgeHoverColor);
-                                                // Also change color of the directed marker (arrowhead) if present
-                                                if (directed) {
-                                                    const markerUrl = d3.select(this).attr('marker-end');
-                                                    if (markerUrl) {
-                                                        // Extract marker id from url(#markerId)
-                                                        const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
-                                                        if (markerIdMatch) {
-                                                            const markerId = markerIdMatch[1];
-                                                            // Change the fill color of the marker's path
-                                                            d3.select(svgElement)
-                                                                .select(`#${markerId}`)
-                                                                .select('path')
-                                                                .attr('fill', edgeHoverColor);
-                                                        }
-                                                    }
-                                                }
+                                                handleEdgeMouseOver(this, edgeHoverColor, directed, svgElement);
                                             })
                                             .on('mouseout', function () {
-                                                d3.select(this).attr('stroke', edgeColor);
-                                                // Also reset color of the directed marker (arrowhead) if present
-                                                if (directed) {
-                                                    const markerUrl = d3.select(this).attr('marker-end');
-                                                    if (markerUrl) {
-                                                        // Extract marker id from url(#markerId)
-                                                        const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
-                                                        if (markerIdMatch) {
-                                                            const markerId = markerIdMatch[1];
-                                                            // Reset the fill color of the marker's path
-                                                            d3.select(svgElement)
-                                                                .select(`#${markerId}`)
-                                                                .select('path')
-                                                                .attr('fill', edgeColor);
-                                                        }
-                                                    }
-                                                }
+                                                handleEdgeMouseOut(this, edgeColor, directed, svgElement);
                                             })
                                             .on('contextmenu', function (event, d) {
                                                 event.preventDefault();
@@ -715,7 +728,6 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                                                 menu.style.position = 'fixed';
                                                 menu.style.left = `${event.clientX}px`;
                                                 menu.style.top = `${event.clientY}px`;
-                                                menu.style.zIndex = 10000;
 
                                                 // Delete link option
                                                 // Delete edge button
@@ -1184,141 +1196,15 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
         .attr('stroke', edgeColor)
         .attr('stroke-width', 1.5)
         .on('mouseover', function () {
-            d3.select(this).attr('stroke', edgeHoverColor);
-            // Also change color of the directed marker (arrowhead) if present
-            if (directed) {
-                const markerUrl = d3.select(this).attr('marker-end');
-                if (markerUrl) {
-                    // Extract marker id from url(#markerId)
-                    const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
-                    if (markerIdMatch) {
-                        const markerId = markerIdMatch[1];
-                        // Change the fill color of the marker's path
-                        d3.select(svgElement)
-                            .select(`#${markerId}`)
-                            .select('path')
-                            .attr('fill', edgeHoverColor);
-                    }
-                }
-            }
+            handleEdgeMouseOver(this, edgeHoverColor, directed, svgElement);
         })
         .on('mouseout', function () {
-            d3.select(this).attr('stroke', edgeColor);
-            // Also reset color of the directed marker (arrowhead) if present
-            if (directed) {
-                const markerUrl = d3.select(this).attr('marker-end');
-                if (markerUrl) {
-                    // Extract marker id from url(#markerId)
-                    const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
-                    if (markerIdMatch) {
-                        const markerId = markerIdMatch[1];
-                        // Reset the fill color of the marker's path
-                        d3.select(svgElement)
-                            .select(`#${markerId}`)
-                            .select('path')
-                            .attr('fill', edgeColor);
-                    }
-                }
-            }
-        })
+            handleEdgeMouseOut(this, edgeColor, directed, svgElement);
+        })        
         .on('contextmenu', function (event, d) {
-            event.preventDefault();
-            event.stopPropagation();
-
-            // Create context menu
-            const menu = document.createElement('div');
-            menu.className = 'floating-menu';
-            menu.style.position = 'fixed';
-            menu.style.left = `${event.clientX}px`;
-            menu.style.top = `${event.clientY}px`;
-            menu.style.zIndex = 10000;
-
-            // Delete link option
-            // Delete edge button
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Delete this edge';
-            deleteBtn.onclick = () => {
-                // Remove the edge from the edges array
-                const idx = edges.indexOf(d);
-                if (idx !== -1) {
-                    edges.splice(idx, 1);
-                    edgesRaw.splice(idx, 1);
-                }
-                // Remove from raw edges as well if needed
-                const rawIdx = edgesRaw.indexOf(d);
-                if (rawIdx !== -1) {
-                    edgesRaw.splice(rawIdx, 1);
-                }
-                // Remove the link visually
-                d3.select(this).remove();
-                // Remove edge label if present
-                if (edgeLabel) {
-                    edgeLabel.filter(e => e === d).remove();
-                }
-                d3.select(svgElement)
-                    .selectAll('.link2')
-                    .filter(e => e === d)
-                    .remove();
-                // Remove context menu
-                menu.remove();
-
-                // If edge was bidirectional, update the reverse edge's bidirectionality
-                if (d.bidirectional) {
-                    // Find the reverse edge (target->source)
-                    const reverseEdge = edges.find(e =>
-                        (e.source.id || e.source) === (d.target.id || d.target) &&
-                        (e.target.id || e.target) === (d.source.id || d.source)
-                    );
-                    if (reverseEdge) {
-                        reverseEdge.bidirectional = false;
-                        d.bidirectional = false;
-                    }
-                }
-                setEdgePositions(link, edgeLabel, node, label, directed, weighted, svg, arrowId);
-                setEdgePositions(link2, edgeLabel, node, label, directed, weighted, svg, arrowId);
-            };
-            menu.appendChild(deleteBtn);
-
-            // Change edge weight button
-            const changeWeightBtn = document.createElement('button');
-            changeWeightBtn.textContent = 'Change edge weight';
-            changeWeightBtn.onclick = () => {
-                let newWeight = parseFloat(prompt('Enter new weight for this edge:', d.weight));
-                if (newWeight !== null) {
-                    if (typeof newWeight !== 'number' || isNaN(newWeight)) {
-                        menu.remove();
-                        alert('Weight must be a valid number.');
-                        return;
-                    }
-                    d.weight = newWeight;
-                    // Update edgeLabel if present
-                    if (edgeLabel) {
-                        edgeLabel
-                            .filter(e => e === d)
-                            .text(newWeight);
-                    }
-                    // Also update in edgesRaw if possible
-                    const raw = edgesRaw.find(e =>
-                        e.source === (d.source.id || d.source) &&
-                        e.target === (d.target.id || d.target)
-                    );
-                    if (raw) raw.weight = newWeight;
-                }
-                menu.remove();
-            };
-            menu.appendChild(changeWeightBtn);
-
-            // Remove menu on click elsewhere
-            function removeMenu(e) {
-                if (!menu.contains(e.target)) {
-                    menu.remove();
-                    document.removeEventListener('mousedown', removeMenu);
-                }
-            }
-            document.addEventListener('mousedown', removeMenu, { once: true });
-
-            document.body.appendChild(menu);
+            showEdgeContextMenu(event, d, svg, edgeLabel, edges, edgesRaw, node, label, directed, weighted, arrowId, link, link2);
         });
+        
 
     // Buffer size for edge hover
     let link2 = edgeBufferLayer.selectAll('.link2')
@@ -1379,7 +1265,6 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
             menu.style.position = 'fixed';
             menu.style.left = `${event.clientX}px`;
             menu.style.top = `${event.clientY}px`;
-            menu.style.zIndex = 10000;
 
             // Delete node option
             const deleteBtn = document.createElement('button');
@@ -1464,125 +1349,13 @@ function addGraph(edgesInput = null, nodes = null, inputName = null) { // Core f
                             .attr('stroke', edgeColor)
                             .attr('stroke-width', 1.5)
                             .on('mouseover', function () {
-                                d3.select(this).attr('stroke', edgeHoverColor);
-                                // Also change color of the directed marker (arrowhead) if present
-                                if (directed) {
-                                    const markerUrl = d3.select(this).attr('marker-end');
-                                    if (markerUrl) {
-                                        // Extract marker id from url(#markerId)
-                                        const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
-                                        if (markerIdMatch) {
-                                            const markerId = markerIdMatch[1];
-                                            // Change the fill color of the marker's path
-                                            d3.select(svgElement)
-                                                .select(`#${markerId}`)
-                                                .select('path')
-                                                .attr('fill', edgeHoverColor);
-                                        }
-                                    }
-                                }
+                                handleEdgeMouseOver(this, edgeHoverColor, directed, svgElement);
                             })
                             .on('mouseout', function () {
-                                d3.select(this).attr('stroke', edgeColor);
-                                // Also reset color of the directed marker (arrowhead) if present
-                                if (directed) {
-                                    const markerUrl = d3.select(this).attr('marker-end');
-                                    if (markerUrl) {
-                                        // Extract marker id from url(#markerId)
-                                        const markerIdMatch = markerUrl.match(/url\(#([^)]+)\)/);
-                                        if (markerIdMatch) {
-                                            const markerId = markerIdMatch[1];
-                                            // Reset the fill color of the marker's path
-                                            d3.select(svgElement)
-                                                .select(`#${markerId}`)
-                                                .select('path')
-                                                .attr('fill', edgeColor);
-                                        }
-                                    }
-                                }
-                            })
+                                handleEdgeMouseOut(this, edgeColor, directed, svgElement);
+                            })        
                             .on('contextmenu', function (event, d) {
-                                event.preventDefault();
-                                event.stopPropagation();
-
-                                // Create context menu
-                                const menu = document.createElement('div');
-                                menu.className = 'floating-menu';
-                                menu.style.position = 'fixed';
-                                menu.style.left = `${event.clientX}px`;
-                                menu.style.top = `${event.clientY}px`;
-                                menu.style.zIndex = 10000;
-
-                                // Delete link option
-                                // Delete edge button
-                                const deleteBtn = document.createElement('button');
-                                deleteBtn.textContent = 'Delete this edge';
-                                deleteBtn.onclick = () => {
-                                    // Remove the edge from the edges array
-                                    const idx = edges.indexOf(d);
-                                    if (idx !== -1) {
-                                        edges.splice(idx, 1);
-                                        edgesRaw.splice(idx, 1);
-                                    }
-                                    // Remove from raw edges as well if needed
-                                    const rawIdx = edgesRaw.indexOf(d);
-                                    if (rawIdx !== -1) {
-                                        edgesRaw.splice(rawIdx, 1);
-                                    }
-                                    // Remove the link visually
-                                    d3.select(this).remove();
-                                    // Remove edge label if present
-                                    if (edgeLabel) {
-                                        edgeLabel.filter(e => e === d).remove();
-                                    }
-                                    d3.select(svgElement)
-                                        .selectAll('.link2')
-                                        .filter(e => e === d)
-                                        .remove();
-                                    // Remove context menu
-                                    menu.remove();
-                                };
-                                menu.appendChild(deleteBtn);
-
-                                // Change edge weight button
-                                const changeWeightBtn = document.createElement('button');
-                                changeWeightBtn.textContent = 'Change edge weight';
-                                changeWeightBtn.onclick = () => {
-                                    let newWeight = parseFloat(prompt('Enter new weight for this edge:', d.weight));
-                                    if (newWeight !== null) {
-                                        if (typeof newWeight !== 'number' || isNaN(newWeight)) {
-                                            menu.remove();
-                                            alert('Weight must be a valid number.');
-                                            return;
-                                        }
-                                        d.weight = newWeight;
-                                        // Update edgeLabel if present
-                                        if (edgeLabel) {
-                                            edgeLabel
-                                                .filter(e => e === d)
-                                                .text(newWeight);
-                                        }
-                                        // Also update in edgesRaw if possible
-                                        const raw = edgesRaw.find(e =>
-                                            e.source === (d.source.id || d.source) &&
-                                            e.target === (d.target.id || d.target)
-                                        );
-                                        if (raw) raw.weight = newWeight;
-                                    }
-                                    menu.remove();
-                                };
-                                menu.appendChild(changeWeightBtn);
-
-                                // Remove menu on click elsewhere
-                                function removeMenu(e) {
-                                    if (!menu.contains(e.target)) {
-                                        menu.remove();
-                                        document.removeEventListener('mousedown', removeMenu);
-                                    }
-                                }
-                                document.addEventListener('mousedown', removeMenu, { once: true });
-
-                                document.body.appendChild(menu);
+                                showEdgeContextMenu(event, d, svg, edgeLabel, edges, edgesRaw, node, label, directed, weighted, arrowId, link, link2);
                             }),
                         update => update,
                         exit => exit.remove()

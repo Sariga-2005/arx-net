@@ -127,3 +127,61 @@ function performResize(event, { startX, startY, startWidth, startHeight, startLe
     }
 }
 /* End of window resize functionality */
+
+function handleTopResizeMouseDown(event, methodsElement, container) {
+    event.preventDefault();
+
+    const startY = event.clientY;
+    const startHeight = methodsElement.offsetHeight;
+
+    function onTopResizeMouseMove(e) {
+        performTopResize(e, startY, startHeight, methodsElement, container);
+    }
+
+    function onTopResizeMouseUp() {
+        document.removeEventListener('mousemove', onTopResizeMouseMove);
+    }
+
+    document.addEventListener('mousemove', onTopResizeMouseMove);
+    document.addEventListener('mouseup', onTopResizeMouseUp, { once: true });
+}
+
+function performTopResize(event, startY, startHeight, methodsElement, container) {
+    const newHeight = startHeight - (event.clientY - startY);
+    const minHeight = container.offsetHeight * 0.2;
+    const maxHeight = container.offsetHeight * 0.9;
+
+    if (newHeight >= minHeight && newHeight <= maxHeight) {
+        methodsElement.style.height = `${newHeight}px`;
+    }
+}
+
+function toggleContainerFullScreen(container, focusAndCenterFn) {
+    if (!isFullScreen) {
+        saveOldContainerDimensions(container);
+        enterFullScreen(container);
+        focusAndCenterFn(container, false, true);
+    } else {
+        exitFullScreen(container);
+        focusAndCenterFn(container, false, null, oldContainerLeft, oldContainerTop);
+    }
+}
+
+function saveOldContainerDimensions(container) {
+    oldContainerWidth = container.style.width;
+    oldContainerHeight = container.style.height;
+    oldContainerLeft = container.offsetLeft;
+    oldContainerTop = container.offsetTop;
+    isFullScreen = true;
+}
+
+function enterFullScreen(container) {
+    container.style.width = `${window.innerWidth}px`;
+    container.style.height = `${window.innerHeight}px`;
+}
+
+function exitFullScreen(container) {
+    container.style.width = oldContainerWidth;
+    container.style.height = oldContainerHeight;
+    isFullScreen = false;
+}
